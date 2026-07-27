@@ -1,0 +1,7 @@
+dataset_year,dataset_id,departure_date,departure_hour,trip_line,scheduled_revenue_stop_departures
+2024,ebrw-j62c,2024-01-01,1,A,4
+2024,ebrw-j62c,2024-01-01,1,C,3
+2024,ebrw-j62c,2024-01-01,2,A,5
+2024,ebrw-j62c,2024-01-01,4,5X,2
+2024,ebrw-j62c,2024-01-01,4,6X,3
+2024,ebrw-j62c,2024-01-01,5,FX,4
