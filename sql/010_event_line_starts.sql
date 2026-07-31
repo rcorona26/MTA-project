@@ -52,11 +52,14 @@ SELECT
     instance_sequence
 FROM ordered;
 
-WITH event_policy AS (
+WITH alert_planned_flag AS (
     SELECT
         i.event_instance_id,
+        r.alert_id,
+        r.update_number,
+        r.published_at_local,
         max(CASE WHEN coalesce(p.excludes_as_planned, 0) = 1 THEN 1 ELSE 0 END)
-            AS event_is_planned
+            AS alert_is_planned
     FROM raw_service_alerts AS r
     JOIN stg_event_instances AS i
         ON i.alert_id = r.alert_id
@@ -64,7 +67,23 @@ WITH event_policy AS (
         ON s.alert_id = r.alert_id
     LEFT JOIN dim_status_policy AS p
         ON p.status_token = s.status_token
-    GROUP BY i.event_instance_id
+    GROUP BY i.event_instance_id, r.alert_id, r.update_number, r.published_at_local
+),
+event_policy AS (
+    -- Planned/scheduled-service tokens only exclude qualifying updates from
+    -- this point forward in the event's timeline, not retroactively: a
+    -- genuinely unplanned disruption that later resolves into a scheduled-
+    -- service message (e.g. "resumed on weekday-service") must keep its
+    -- earlier unplanned hours.
+    SELECT
+        event_instance_id,
+        alert_id,
+        max(alert_is_planned) OVER (
+            PARTITION BY event_instance_id
+            ORDER BY published_at_local, update_number, alert_id
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS event_is_planned_so_far
+    FROM alert_planned_flag
 ),
 qualifying_updates AS (
     SELECT
@@ -81,7 +100,8 @@ qualifying_updates AS (
         ON i.alert_id = r.alert_id
     JOIN event_policy AS ep
         ON ep.event_instance_id = i.event_instance_id
-       AND ep.event_is_planned = 0
+       AND ep.alert_id = r.alert_id
+       AND ep.event_is_planned_so_far = 0
     JOIN stg_alert_lines AS l
         ON l.alert_id = r.alert_id
     WHERE EXISTS (

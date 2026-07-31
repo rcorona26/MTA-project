@@ -51,4 +51,10 @@ LEFT JOIN tmp_positive_line_hours AS p
 CREATE INDEX ix_line_hour_target_value
     ON fct_line_hour_targets (significant_disruption_next_hour, prediction_hour_local);
 
+CREATE INDEX ix_targets_line_hour
+    ON fct_line_hour_targets (line, prediction_hour_local);
+
+CREATE INDEX ix_targets_hour
+    ON fct_line_hour_targets (prediction_hour_local);
+
 DROP TABLE temp.tmp_positive_line_hours;

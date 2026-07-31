@@ -91,7 +91,7 @@ The full pipeline was verified against a snapshot through June 29, 2026:
 - 113,106 derived event instances
 - 54,081 fully covered source hours
 - 1,352,025 canonical line-hour rows
-- 148,914 positive line-hours (11.014%)
+- 148,926 positive line-hours (11.015%)
 - SQLite `PRAGMA integrity_check`: `ok`
 
 See [docs/data_feasibility_report.md](docs/data_feasibility_report.md) for the
@@ -105,6 +105,9 @@ and should not be described as a next-hour prediction system.
 
 ## Next milestone
 
-Optimize and complete the full schedule-enriched feature build, then complete
-the generated 200-row human label audit. Only after those gates pass should the
-project train historical-rate baselines and stronger classifiers.
+Both pre-training gates are complete: the schedule-enriched feature build is
+optimized (see indexes in `sql/020_line_hour_targets.sql`), and the 200-row
+human label audit is done (`data/review/label_review_sample.csv`; see
+[docs/target_definition.md](docs/target_definition.md) for the audit result
+and the resulting planned-exclusion rule fix). Next: train historical-rate
+baselines and stronger classifiers on `fct_line_hour_features`.

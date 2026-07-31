@@ -36,8 +36,9 @@ the same update also contains one of the qualifying statuses.
 
 ## Planned-event exclusion
 
-An entire event is excluded if any of its updates contains one of these explicit
-planned/scheduled-service status tokens:
+A qualifying update is excluded if that update, or any earlier update in the
+same event, contains one of these explicit planned/scheduled-service status
+tokens:
 
 - `planned-work`
 - `weekday-service`
@@ -47,9 +48,35 @@ planned/scheduled-service status tokens:
 - `essential-service`
 - `no-scheduled-service`
 
+The exclusion is evaluated as of each update's position in the event's
+timeline rather than over the event as a whole. This matters because an event
+can start as a genuinely unplanned disruption and only later resolve into a
+scheduled-service message (e.g. "resumed on weekday-service"); an earlier
+version of this rule excluded the entire event in that case, wiping out the
+real unplanned hours along with the resolution message.
+
 The rule intentionally uses structured status values rather than fragile text
-classification. A future labeled audit should measure false inclusions and
-exclusions from this policy.
+classification.
+
+**2026-07-30 labeled audit:** a 200-row stratified human review
+(`data/review/label_review_sample.csv`, 100 included_positive / 50
+excluded_as_planned / 50 excluded_nonqualifying_status) found 10/200 (5%)
+disagreements with the policy, all 10 in the `excluded_as_planned` stratum and
+all attributable to the retroactive whole-event exclusion described above.
+The rule was changed from whole-event to timeline-relative exclusion in
+response, and labels were regenerated (positive line-hours: 148,914 ->
+148,926 of 1,352,025, +0.0009 pts prevalence). A follow-up spot-check against
+the 10 originally-disagreeing rows found 8/10 corrected. The remaining 2 are
+known limitations, not regressions:
+
+- An event can still evolve non-monotonically (an early planned-sounding
+  compound status token followed by a later genuine unplanned escalation,
+  e.g. a mid-event derailment); the timeline-relative rule only protects
+  hours *before* a planned token first appears, not ones after. Not fixed by
+  this change.
+- One audit row's `event_instance_id` did not match the database's alert
+  history for that id, which looks like a data-entry error made during the
+  manual review rather than a pipeline issue.
 
 ## Event deduplication
 
