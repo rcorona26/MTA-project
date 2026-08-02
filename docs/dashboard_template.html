@@ -1,0 +1,714 @@
+<title>Subway Disruption Model — Retrospective Review</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #f2f2ef;
+    --surface:      #fcfcfb;
+    --ink:          #0b0b0b;
+    --ink-2:        #52514e;
+    --ink-3:        #898781;
+    --grid:         #e1e0d9;
+    --axis:         #c3c2b7;
+    --rule:         rgba(11,11,11,0.10);
+    --s1:           #2a78d6;
+    --s2:           #eb6834;
+    --s3:           #1baf7a;
+    --seq-1:        #cde2fb;
+    --seq-7:        #0d366b;
+    --warn:         #ec835a;
+    --crit:         #d03b3b;
+    --good:         #0ca30c;
+    --chip-ink:     #fff;
+    --sans: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane:   #0d0d0d;
+      --surface: #1a1a19;
+      --ink:     #ffffff;
+      --ink-2:   #c3c2b7;
+      --ink-3:   #898781;
+      --grid:    #2c2c2a;
+      --axis:    #383835;
+      --rule:    rgba(255,255,255,0.10);
+      --s1:      #3987e5;
+      --s2:      #d95926;
+      --s3:      #199e70;
+      --seq-1:   #184f95;
+      --seq-7:   #cde2fb;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:   #0d0d0d;
+    --surface: #1a1a19;
+    --ink:     #ffffff;
+    --ink-2:   #c3c2b7;
+    --ink-3:   #898781;
+    --grid:    #2c2c2a;
+    --axis:    #383835;
+    --rule:    rgba(255,255,255,0.10);
+    --s1:      #3987e5;
+    --s2:      #d95926;
+    --s3:      #199e70;
+    --seq-1:   #184f95;
+    --seq-7:   #cde2fb;
+  }
+
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: var(--body);
+    line-height: 1.55;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2rem) 5rem;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  .eyebrow {
+    font-family: var(--sans);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ink-3);
+    margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(1.9rem, 4.5vw, 2.9rem);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.08;
+    text-wrap: balance;
+    margin: 0 0 0.75rem;
+  }
+  h2 {
+    font-family: var(--sans);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    margin: 0;
+  }
+  .lede { font-size: 1.05rem; color: var(--ink-2); max-width: 62ch; margin: 0; }
+  .note { font-size: 0.85rem; color: var(--ink-3); max-width: 68ch; margin: 0; }
+  p { margin: 0; }
+
+  header .meta {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem;
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem; color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  header .meta b { color: var(--ink-2); font-weight: 600; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .tile { background: var(--surface); padding: 1.15rem 1.25rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .tile .k { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; }
+  .tile .v { font-family: var(--sans); font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .tile .s { font-size: 0.8rem; color: var(--ink-2); }
+
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 1.4rem clamp(1rem, 2.5vw, 1.5rem) 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .card > header { display: flex; flex-direction: column; gap: 0.35rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.25rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; font-size: 0.82rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  .chartbox { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tick { font-size: 11px; fill: var(--ink-3); font-family: var(--body); }
+  .axis-title { font-size: 11px; fill: var(--ink-3); font-family: var(--sans); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1; }
+
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0;
+    transition: opacity .12s; z-index: 5;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+    padding: 0.5rem 0.65rem; font-size: 0.8rem; min-width: 90px;
+    font-variant-numeric: tabular-nums; line-height: 1.4;
+  }
+  .tip b { font-family: var(--sans); display: block; margin-bottom: 0.15rem; }
+  .tip .row { display: flex; align-items: center; gap: 0.4rem; justify-content: space-between; }
+  .tip .row span:first-child { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink-2); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.87rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 700; }
+  tbody tr.best td { font-weight: 700; }
+  tbody tr.best td:first-child::after { content: "best"; font-family: var(--sans); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; background: var(--s1); color: #fff; padding: 0.1rem 0.35rem; border-radius: 2px; margin-left: 0.5rem; font-weight: 700; vertical-align: middle; }
+  .tbl-scroll { overflow-x: auto; }
+
+  details { font-size: 0.85rem; }
+  summary { cursor: pointer; color: var(--ink-3); font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; padding: 0.3rem 0; }
+  summary:hover { color: var(--ink-2); }
+  details[open] summary { margin-bottom: 0.6rem; }
+  :focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; border-radius: 2px; }
+
+  .bullet { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 0.7rem; flex: none; letter-spacing: 0; }
+
+  .callout { border-left: 3px solid var(--warn); padding: 0.15rem 0 0.15rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .callout.crit { border-left-color: var(--crit); }
+  .callout h3 { font-family: var(--sans); font-size: 0.95rem; margin: 0; font-weight: 700; }
+  .callout p { font-size: 0.9rem; color: var(--ink-2); max-width: 70ch; }
+
+  .limits { display: flex; flex-direction: column; gap: 1.15rem; }
+  footer { border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: 0.82rem; color: var(--ink-3); display: flex; flex-direction: column; gap: 0.4rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; background: var(--plane); padding: 0.1em 0.35em; border-radius: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Retrospective model review</p>
+    <h1>Predicting the next hour of subway disruption</h1>
+    <p class="lede">
+      Three models scored against 1,052,867 line-hours of MTA service alerts. The
+      best one is meaningfully better than chance and clearly worse than a
+      dependable forecast — this page shows both halves of that honestly.
+    </p>
+    <div class="meta">
+      <span>Snapshot <b>__SNAP_START__ → __SNAP_END__</b></span>
+      <span>Model-eligible line-hours <b>__ROWS__</b></span>
+      <span>Split <b>chronological 70 / 15 / 15</b></span>
+      <span>Target <b>significant_disruption_next_hour</b></span>
+    </div>
+  </header>
+
+  <section class="tiles">
+    <div class="tile">
+      <span class="k">Best PR-AUC</span>
+      <span class="v">0.257</span>
+      <span class="s">Gradient boosting, held-out test</span>
+    </div>
+    <div class="tile">
+      <span class="k">Precision at threshold</span>
+      <span class="v">23.8%</span>
+      <span class="s">vs 14.4% base rate — 1.65× lift</span>
+    </div>
+    <div class="tile">
+      <span class="k">Recall</span>
+      <span class="v">62.8%</span>
+      <span class="s">Of disrupted hours, correctly flagged</span>
+    </div>
+    <div class="tile">
+      <span class="k">False alarm share</span>
+      <span class="v">76.2%</span>
+      <span class="s">Flagged hours with no disruption</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <header>
+      <h2>Model comparison</h2>
+      <p class="note">
+        Evaluated once on the held-out test set, with each model's decision
+        threshold tuned separately on validation. The historical-rate baseline is
+        not a model — it predicts each line's own trailing 30-day rate, and is the
+        bar any real model has to clear.
+      </p>
+    </header>
+    <div class="chartbox"><div id="c-models"></div><div class="tip" id="t-models"></div></div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Model</th><th>PR-AUC</th><th>ROC-AUC</th><th>Precision</th><th>Recall</th><th>Threshold</th></tr></thead>
+        <tbody id="tbody-models"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid-2">
+    <section class="card">
+      <header>
+        <h2>Precision–recall trade-off</h2>
+        <p class="note">
+          Every operating point available, not just the tuned one. The dashed line
+          is the 14.4% test base rate — where a coin-flip model would sit.
+        </p>
+      </header>
+      <div class="legend" id="l-pr"></div>
+      <div class="chartbox"><div id="c-pr"></div><div class="tip" id="t-pr"></div></div>
+      <details>
+        <summary>Data table</summary>
+        <div class="tbl-scroll"><table><thead><tr><th>Recall</th><th>Baseline</th><th>Logistic</th><th>Gradient boosting</th></tr></thead><tbody id="tbody-pr"></tbody></table></div>
+      </details>
+    </section>
+
+    <section class="card">
+      <header>
+        <h2>Calibration</h2>
+        <p class="note">
+          Predicted probability against observed frequency. A trustworthy
+          probability tracks the diagonal.
+        </p>
+      </header>
+      <div class="legend" id="l-cal"></div>
+      <div class="chartbox"><div id="c-cal"></div><div class="tip" id="t-cal"></div></div>
+      <div class="callout crit">
+        <h3>These probabilities are not calibrated</h3>
+        <p>
+          Hours the model scores at 0.76 actually see disruption 31% of the time.
+          That is expected — <code>class_weight="balanced"</code> deliberately
+          inflates minority-class scores — but it means the raw output ranks hours
+          well and must not be read as "a 76% chance". Ranking is usable today;
+          probabilities need Platt scaling or isotonic regression first.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <header>
+      <h2>Which lines get disrupted</h2>
+      <p class="note">
+        Share of that line's eligible hours followed by a qualifying unplanned
+        alert. Bars are shaded by magnitude; the route bullet carries identity.
+        Shuttles and the Z run so few scheduled hours that their rates rest on
+        thin samples.
+      </p>
+    </header>
+    <div class="chartbox"><div id="c-lines"></div><div class="tip" id="t-lines"></div></div>
+    <details>
+      <summary>Data table</summary>
+      <div class="tbl-scroll"><table><thead><tr><th>Line</th><th>Eligible hours</th><th>Disrupted hours</th><th>Rate</th></tr></thead><tbody id="tbody-lines"></tbody></table></div>
+    </details>
+  </section>
+
+  <div class="grid-2">
+    <section class="card">
+      <header>
+        <h2>Time of day</h2>
+        <p class="note">Disruption rate by hour, split weekday against weekend.</p>
+      </header>
+      <div class="legend" id="l-hour"></div>
+      <div class="chartbox"><div id="c-hour"></div><div class="tip" id="t-hour"></div></div>
+    </section>
+
+    <section class="card">
+      <header>
+        <h2>Drift over the snapshot</h2>
+        <p class="note">
+          Monthly disruption rate. The shaded band is the test period — the model
+          trains on a calmer era than it is judged on.
+        </p>
+      </header>
+      <div class="chartbox"><div id="c-month"></div><div class="tip" id="t-month"></div></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <header>
+      <h2>What the model actually leans on</h2>
+      <p class="note">
+        Permutation importance — the drop in average precision when a feature's
+        values are shuffled. Measured on a 20,000-row test subsample, 3 repeats.
+      </p>
+    </header>
+    <div class="chartbox"><div id="c-imp"></div><div class="tip" id="t-imp"></div></div>
+  </section>
+
+  <section class="card limits">
+    <header><h2>Read this before trusting the number</h2></header>
+
+    <div class="callout">
+      <h3>The model mostly learned structure, not conditions</h3>
+      <p>
+        The two dominant features are the line's own trailing 30-day rate and the
+        hour of day. It has learned that the A is chronically disrupted and that
+        disruption clusters at certain hours — durable facts you could write on an
+        index card. Features describing evolving conditions contribute far less,
+        which is why gradient boosting beats logistic regression by only 0.006
+        PR-AUC.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>The base rate nearly doubled across the snapshot</h3>
+      <p>
+        Monthly rates run about 7.7% in early 2021 against 15.4% by April 2026.
+        The chronological split is the correct choice for forecasting, but it means
+        training happens on a quieter period than testing. The tuned threshold
+        transfers here only because validation (14.2%) and test (14.4%) happen to
+        be close; that will not hold for a future period without retuning.
+      </p>
+    </div>
+
+    <div class="callout crit">
+      <h3>The label is a proxy for alerts, not for lateness</h3>
+      <p>
+        A positive means the MTA published a qualifying unplanned alert for that
+        line in that hour — not that any specific train ran late. Changes in the
+        agency's alerting practice move this target independently of actual service,
+        and are a plausible contributor to the drift above.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>This is retrospective only</h3>
+      <p>
+        Every number here comes from a static historical snapshot. There is no live
+        ingest, no incremental feature computation, and no serving path — so nothing
+        on this page is a live prediction, and at 23.8% precision a
+        customer-facing "delays expected" alert would be wrong roughly three times
+        out of four.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Source: MTA Service Alerts (Beginning April 2020), NY Open Data
+      <code>7kct-peq7</code>. Alert snapshot through 2026-06-29; model-eligible
+      hours end 2026-04-27, bounded by official schedule coverage.
+    </p>
+    <p>
+      Reproduce with <code>mta-alerts build --replace</code> then
+      <code>python train_classifier.py</code>. Full write-up in
+      <code>docs/model_results.md</code>. Not affiliated with the MTA.
+    </p>
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+const MTA = {
+  "1":["#EE352E","#fff"],"2":["#EE352E","#fff"],"3":["#EE352E","#fff"],
+  "4":["#00933C","#fff"],"5":["#00933C","#fff"],"6":["#00933C","#fff"],
+  "7":["#B933AD","#fff"],
+  "A":["#0039A6","#fff"],"C":["#0039A6","#fff"],"E":["#0039A6","#fff"],
+  "B":["#FF6319","#fff"],"D":["#FF6319","#fff"],"F":["#FF6319","#fff"],"M":["#FF6319","#fff"],
+  "G":["#6CBE45","#fff"],
+  "J":["#996633","#fff"],"Z":["#996633","#fff"],
+  "L":["#A7A9AC","#000"],
+  "N":["#FCCC0A","#000"],"Q":["#FCCC0A","#000"],"R":["#FCCC0A","#000"],"W":["#FCCC0A","#000"],
+  "H":["#808183","#fff"],"FS":["#808183","#fff"],"GS":["#808183","#fff"]
+};
+const LINE_NAME = {"H":"Rockaway Pk Shuttle","FS":"Franklin Av Shuttle","GS":"42 St Shuttle"};
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = v => (v * 100).toFixed(1) + "%";
+const pct0 = v => Math.round(v * 100) + "%";
+const NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function svgRoot(host, w, h) {
+  host.innerHTML = "";
+  const s = el("svg", {viewBox: `0 0 ${w} ${h}`, role: "img"}, host);
+  return s;
+}
+function mixHex(a, b, t) {
+  const p = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+  const [r1,g1,b1] = p(a), [r2,g2,b2] = p(b);
+  const c = (x,y) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
+  return `#${c(r1,r2)}${c(g1,g2)}${c(b1,b2)}`;
+}
+
+function tipFor(hostId, tipId) {
+  const host = document.getElementById(hostId).parentElement;
+  const tip = document.getElementById(tipId);
+  return {
+    show(html, ev) {
+      tip.innerHTML = html;
+      tip.style.opacity = 1;
+      const r = host.getBoundingClientRect();
+      let x = ev.clientX - r.left + 12;
+      let y = ev.clientY - r.top - 10;
+      if (x + tip.offsetWidth > r.width) x = ev.clientX - r.left - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, x) + "px";
+      tip.style.top = Math.max(0, y) + "px";
+    },
+    hide() { tip.style.opacity = 0; }
+  };
+}
+function legend(hostId, items) {
+  document.getElementById(hostId).innerHTML = items.map(i =>
+    `<span><i class="swatch" style="background:${i.color}"></i>${i.name}</span>`).join("");
+}
+
+/* ---------- line / curve chart ---------- */
+function lineChart(hostId, tipId, series, o) {
+  const host = document.getElementById(hostId);
+  const W = 640, H = o.height || 300;
+  const m = {t: 14, r: 16, b: 38, l: 46};
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const [x0, x1] = o.xDomain, [y0, y1] = o.yDomain;
+  const sx = v => m.l + (v - x0) / (x1 - x0) * iw;
+  const sy = v => m.t + ih - (v - y0) / (y1 - y0) * ih;
+
+  (o.yTicks || []).forEach(t => {
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(t), y2: sy(t), class: "gridline"}, s);
+    el("text", {x: m.l - 8, y: sy(t) + 4, class: "tick", "text-anchor": "end"}, s)
+      .textContent = o.yFmt ? o.yFmt(t) : t;
+  });
+  (o.xTicks || []).forEach(t => {
+    el("text", {x: sx(t.v !== undefined ? t.v : t), y: H - m.b + 17, class: "tick", "text-anchor": "middle"}, s)
+      .textContent = t.label !== undefined ? t.label : (o.xFmt ? o.xFmt(t) : t);
+  });
+  el("line", {x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, class: "baseline"}, s);
+
+  if (o.bands) o.bands.forEach(b => {
+    el("rect", {x: sx(b.from), y: m.t, width: sx(b.to) - sx(b.from), height: ih,
+      fill: css("--s1"), opacity: 0.07}, s);
+    el("text", {x: (sx(b.from) + sx(b.to)) / 2, y: m.t + 12, class: "tick", "text-anchor": "middle"}, s)
+      .textContent = b.label;
+  });
+  if (o.refLine !== undefined)
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(o.refLine), y2: sy(o.refLine),
+      stroke: css("--ink-3"), "stroke-width": 1.5, "stroke-dasharray": "5 4"}, s);
+  if (o.diagonal)
+    el("line", {x1: sx(x0), y1: sy(y0), x2: sx(Math.min(x1, y1)), y2: sy(Math.min(x1, y1)),
+      stroke: css("--ink-3"), "stroke-width": 1.5, "stroke-dasharray": "5 4"}, s);
+
+  el("text", {x: m.l, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
+  el("text", {x: 0, y: 0, class: "axis-title",
+    transform: `translate(11 ${m.t + ih}) rotate(-90)`}, s).textContent = o.yTitle;
+
+  series.forEach(ser => {
+    const d = ser.points.map((p, i) => `${i ? "L" : "M"}${sx(p[0]).toFixed(1)} ${sy(p[1]).toFixed(1)}`).join(" ");
+    el("path", {d, fill: "none", stroke: ser.color, "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round"}, s);
+    if (ser.dots) ser.points.forEach(p => {
+      el("circle", {cx: sx(p[0]), cy: sy(p[1]), r: 4.5, fill: ser.color,
+        stroke: css("--surface"), "stroke-width": 2}, s);
+    });
+  });
+
+  const tip = tipFor(hostId, tipId);
+  const rule = el("line", {y1: m.t, y2: m.t + ih, stroke: css("--axis"), "stroke-width": 1, opacity: 0}, s);
+  const hit = el("rect", {x: m.l, y: m.t, width: iw, height: ih, fill: "transparent"}, s);
+  hit.style.cursor = "crosshair";
+  hit.addEventListener("mousemove", ev => {
+    const pt = s.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const loc = pt.matrixTransform(s.getScreenCTM().inverse());
+    const xv = x0 + (loc.x - m.l) / iw * (x1 - x0);
+    let rows = "", gx = null;
+    series.forEach(ser => {
+      let best = ser.points[0], bd = Infinity;
+      ser.points.forEach(p => { const d = Math.abs(p[0] - xv); if (d < bd) { bd = d; best = p; } });
+      if (gx === null) gx = best[0];
+      rows += `<div class="row"><span><i class="swatch" style="background:${ser.color}"></i>${ser.name}</span><span>${o.tipFmt(best[1])}</span></div>`;
+    });
+    rule.setAttribute("x1", sx(gx)); rule.setAttribute("x2", sx(gx));
+    rule.setAttribute("opacity", 1);
+    tip.show(`<b>${o.tipLabel(gx)}</b>${rows}`, ev);
+  });
+  hit.addEventListener("mouseleave", () => { tip.hide(); rule.setAttribute("opacity", 0); });
+}
+
+/* ---------- vertical bars ---------- */
+function barChart(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const W = 1000, H = o.height || 260;
+  const m = {t: 12, r: 8, b: o.bottom || 46, l: 46};
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = o.max, step = iw / items.length, bw = Math.min(step - 6, 42);
+  const sy = v => m.t + ih - v / max * ih;
+
+  (o.yTicks || []).forEach(t => {
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(t), y2: sy(t), class: "gridline"}, s);
+    el("text", {x: m.l - 8, y: sy(t) + 4, class: "tick", "text-anchor": "end"}, s).textContent = pct0(t);
+  });
+
+  const tip = tipFor(hostId, tipId);
+  items.forEach((it, i) => {
+    const x = m.l + i * step + (step - bw) / 2;
+    const h = Math.max(1.5, ih - (sy(it.value) - m.t));
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x, y: sy(it.value), width: bw, height: h, rx: 3, fill: it.color}, g);
+    el("rect", {x: x - 2, y: m.t, width: bw + 4, height: ih, fill: "transparent"}, g);
+    g.addEventListener("mousemove", ev => tip.show(o.tip(it), ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+
+    if (o.bullets) {
+      const [bg, fg] = MTA[it.key] || ["#808183", "#fff"];
+      el("circle", {cx: x + bw / 2, cy: H - m.b + 15, r: 10, fill: bg}, s);
+      el("text", {x: x + bw / 2, y: H - m.b + 19, "text-anchor": "middle",
+        "font-size": it.key.length > 1 ? 8 : 11, "font-weight": 700,
+        fill: fg, "font-family": "Helvetica Neue, Arial, sans-serif"}, s).textContent = it.key;
+    } else {
+      el("text", {x: x + bw / 2, y: H - m.b + 16, class: "tick", "text-anchor": "middle"}, s)
+        .textContent = it.key;
+    }
+  });
+  el("line", {x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, class: "baseline"}, s);
+  el("text", {x: 0, y: 0, class: "axis-title", transform: `translate(11 ${m.t + ih}) rotate(-90)`}, s)
+    .textContent = o.yTitle;
+}
+
+/* ---------- horizontal bars ---------- */
+function hbarChart(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const rowH = 30, W = 820, labelW = o.labelW || 250;
+  const H = items.length * rowH + 30;
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - labelW - 90;
+  const max = Math.max(...items.map(i => i.value)) * 1.02;
+  const tip = tipFor(hostId, tipId);
+
+  items.forEach((it, i) => {
+    const y = i * rowH + 8;
+    el("text", {x: labelW - 12, y: y + 15, class: "tick", "text-anchor": "end"}, s)
+      .textContent = it.key;
+    const w = Math.max(2, it.value / max * iw);
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x: labelW, y: y + 3, width: w, height: rowH - 12, rx: 3, fill: it.color}, g);
+    el("rect", {x: labelW, y, width: iw, height: rowH, fill: "transparent"}, g);
+    el("text", {x: labelW + w + 8, y: y + 15, class: "tick", fill: css("--ink-2")}, g)
+      .textContent = o.fmt(it.value);
+    g.addEventListener("mousemove", ev => tip.show(o.tip(it), ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+  });
+  el("line", {x1: labelW, x2: labelW, y1: 4, y2: H - 18, class: "baseline"}, s);
+  el("text", {x: labelW, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
+}
+
+/* ================= render ================= */
+function render() {
+  const S = [css("--s1"), css("--s2"), css("--s3")];
+  const NAMES = ["Historical-rate baseline", "Logistic regression", "Gradient boosting"];
+
+  /* model comparison */
+  hbarChart("c-models", "t-models", DATA.models.map((m, i) => ({
+    key: m.model, value: m.pr_auc,
+    color: m.model === "Gradient boosting" ? css("--s1") : css("--ink-3")
+  })), {
+    label: "PR-AUC by model", xTitle: "PR-AUC (higher is better)",
+    fmt: v => v.toFixed(4),
+    tip: it => {
+      const m = DATA.models.find(x => x.model === it.key);
+      return `<b>${m.model}</b>
+        <div class="row"><span>PR-AUC</span><span>${m.pr_auc.toFixed(4)}</span></div>
+        <div class="row"><span>ROC-AUC</span><span>${m.roc_auc.toFixed(4)}</span></div>
+        <div class="row"><span>Precision</span><span>${pct(m.precision)}</span></div>
+        <div class="row"><span>Recall</span><span>${pct(m.recall)}</span></div>`;
+    }
+  });
+
+  document.getElementById("tbody-models").innerHTML = DATA.models.map(m =>
+    `<tr class="${m.model === "Gradient boosting" ? "best" : ""}">
+      <td>${m.model}</td><td>${m.pr_auc.toFixed(4)}</td><td>${m.roc_auc.toFixed(4)}</td>
+      <td>${pct(m.precision)}</td><td>${pct(m.recall)}</td><td>${m.threshold.toFixed(2)}</td>
+    </tr>`).join("");
+
+  /* PR curves */
+  const prSeries = NAMES.map((n, i) => ({name: n, color: S[i], points: DATA.pr_curves[n]}));
+  legend("l-pr", prSeries);
+  lineChart("c-pr", "t-pr", prSeries, {
+    label: "Precision-recall curves", height: 300,
+    xDomain: [0, 1], yDomain: [0, 1],
+    xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1],
+    yFmt: pct0, xFmt: pct0, refLine: DATA.meta.test_rate,
+    xTitle: "Recall", yTitle: "Precision",
+    tipLabel: v => "Recall " + pct(v), tipFmt: v => pct(v)
+  });
+  const rows = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 199];
+  document.getElementById("tbody-pr").innerHTML = rows.map(i => {
+    const b = DATA.pr_curves[NAMES[0]][i];
+    if (!b) return "";
+    return `<tr><td>${pct(b[0])}</td>${NAMES.map(n =>
+      `<td>${DATA.pr_curves[n][i] ? pct(DATA.pr_curves[n][i][1]) : "—"}</td>`).join("")}</tr>`;
+  }).join("");
+
+  /* calibration */
+  legend("l-cal", [{name: "Gradient boosting", color: S[0]}, {name: "Perfect calibration", color: css("--ink-3")}]);
+  lineChart("c-cal", "t-cal", [{name: "Observed rate", color: S[0], points: DATA.calibration, dots: true}], {
+    label: "Calibration curve", height: 300,
+    xDomain: [0, 0.8], yDomain: [0, 0.8],
+    xTicks: [0, 0.2, 0.4, 0.6, 0.8], yTicks: [0, 0.2, 0.4, 0.6, 0.8],
+    yFmt: pct0, xFmt: pct0, diagonal: true,
+    xTitle: "Predicted probability", yTitle: "Observed rate",
+    tipLabel: v => "Predicted " + pct(v), tipFmt: v => pct(v)
+  });
+
+  /* prevalence by line */
+  const maxLine = Math.max(...DATA.by_line.map(d => d.prevalence));
+  barChart("c-lines", "t-lines", DATA.by_line.map(d => ({
+    key: d.line, value: d.prevalence,
+    color: mixHex(css("--seq-1"), css("--seq-7"), 0.25 + 0.75 * (d.prevalence / maxLine))
+  })), {
+    label: "Disruption rate by line", height: 300, max: 0.26, bottom: 46,
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2, 0.25], yTitle: "Disruption rate", bullets: true,
+    tip: it => {
+      const d = DATA.by_line.find(x => x.line === it.key);
+      return `<b>${LINE_NAME[d.line] || d.line + " train"}</b>
+        <div class="row"><span>Rate</span><span>${pct(d.prevalence)}</span></div>
+        <div class="row"><span>Disrupted</span><span>${d.positives.toLocaleString()}</span></div>
+        <div class="row"><span>Eligible hours</span><span>${d.line_hours.toLocaleString()}</span></div>`;
+    }
+  });
+  document.getElementById("tbody-lines").innerHTML = DATA.by_line.map(d =>
+    `<tr><td>${LINE_NAME[d.line] || d.line}</td><td>${d.line_hours.toLocaleString()}</td>
+     <td>${d.positives.toLocaleString()}</td><td>${pct(d.prevalence)}</td></tr>`).join("");
+
+  /* hour of day */
+  const hourSeries = [
+    {name: "Weekday", color: S[0], points: DATA.by_hour.map(d => [d.hour, d.weekday])},
+    {name: "Weekend", color: S[1], points: DATA.by_hour.map(d => [d.hour, d.weekend])}
+  ];
+  legend("l-hour", hourSeries);
+  lineChart("c-hour", "t-hour", hourSeries, {
+    label: "Disruption rate by hour of day", height: 260,
+    xDomain: [0, 23], yDomain: [0, 0.22],
+    xTicks: [{v: 0, label: "12a"}, {v: 6, label: "6a"}, {v: 12, label: "12p"}, {v: 18, label: "6p"}, {v: 23, label: "11p"}],
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2], yFmt: pct0,
+    xTitle: "Hour of day", yTitle: "Disruption rate",
+    tipLabel: v => { const h = Math.round(v); return h === 0 ? "12 AM" : h < 12 ? h + " AM" : h === 12 ? "12 PM" : (h - 12) + " PM"; },
+    tipFmt: pct
+  });
+
+  /* monthly drift */
+  const months = DATA.by_month;
+  const testStart = months.findIndex(m => m.month === DATA.meta.test_start);
+  lineChart("c-month", "t-month", [
+    {name: "Monthly rate", color: S[0], points: months.map((d, i) => [i, d.prevalence])}
+  ], {
+    label: "Monthly disruption rate", height: 260,
+    xDomain: [0, months.length - 1], yDomain: [0, 0.22],
+    xTicks: months.map((d, i) => ({v: i, label: d.month.endsWith("-01") ? d.month.slice(0, 4) : null}))
+      .filter(t => t.label),
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2], yFmt: pct0,
+    bands: [{from: testStart, to: months.length - 1, label: "test"}],
+    xTitle: "Month", yTitle: "Disruption rate",
+    tipLabel: i => months[Math.round(i)] ? months[Math.round(i)].month : "",
+    tipFmt: pct
+  });
+
+  /* importance */
+  hbarChart("c-imp", "t-imp", DATA.importance.map((d, i) => ({
+    key: d.feature, value: d.value, color: i < 2 ? css("--s1") : css("--ink-3")
+  })), {
+    label: "Permutation importance", labelW: 290,
+    xTitle: "Drop in average precision when shuffled",
+    fmt: v => v.toFixed(4),
+    tip: it => `<b>${it.key}</b><div class="row"><span>Importance</span><span>${it.value.toFixed(4)}</span></div>`
+  });
+}
+
+render();
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+mq.addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+</script>
