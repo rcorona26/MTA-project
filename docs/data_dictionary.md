@@ -65,6 +65,49 @@ hours, plus basic calendar fields. This guarantees explicit negative examples.
 | `significant_disruption_next_hour` | INTEGER | Binary classification target. |
 | `positive_event_count` | INTEGER | Number of distinct qualifying events beginning in the window. |
 
+### `dim_schedule_date_coverage`
+
+One row per service date present in the official schedule extract. A prediction
+hour whose date is absent here has unknown schedule coverage rather than known
+absence of service.
+
+### `stg_unmapped_schedule_lines`
+
+Audit table for schedule `trip_line` values that are neither canonical subway
+lines nor known express aliases. Like `stg_unmapped_affected_tokens`, these
+records are never silently folded into a canonical line.
+
+### `fct_schedule_line_hours`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `line` | TEXT | Canonical subway line. Express variants `5X`, `6X`, `7X`, and `FX` are folded into their base line; `SI` is excluded. |
+| `prediction_hour_local` | TEXT datetime | Start of the scheduled departure hour. |
+| `scheduled_revenue_stop_departures` | INTEGER | Scheduled revenue stop departures summed across trips for that line and hour. |
+
+### `fct_line_hour_features`
+
+One row per `(line, prediction_hour_local)`, carrying the label alongside
+features computed strictly from data available before the prediction hour. All
+trailing windows end at `1 PRECEDING`, so the prediction hour never contributes
+to its own features.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `calendar_year`, `calendar_month`, `day_of_week`, `hour_of_day`, `is_weekend` | INTEGER | Calendar fields carried from `dim_line_hour`. |
+| `schedule_coverage_known` | INTEGER | 1 when the date appears in the schedule extract, else 0. |
+| `scheduled_service_active` | INTEGER nullable | 1 when the line has scheduled departures that hour, 0 when covered but absent, NULL when coverage is unknown. |
+| `scheduled_revenue_stop_departures` | INTEGER nullable | Scheduled departure volume for the hour; NULL outside schedule coverage. |
+| `line_history_hours` | INTEGER | Count of prior observed hours for the line, so early rows with thin history are identifiable. |
+| `line_event_starts_prior_1h` / `_3h` / `_6h` / `_24h` | INTEGER | Qualifying event starts on the line in the trailing window ending before the prediction hour. |
+| `line_positive_rate_prior_7d` / `_30d` | REAL nullable | The line's own positive-label rate over the trailing 168 / 720 hours. |
+| `hours_since_line_disruption` | REAL nullable | Hours since the line's most recent prior positive hour; NULL when it has none. |
+| `system_event_line_starts_prior_1h` / `_3h` / `_6h` / `_24h` | INTEGER | Same event-start counts summed across all lines, capturing system-wide conditions. |
+| `system_positive_line_rate_prior_7d` | REAL nullable | System-wide positive line-hour rate over the trailing 168 hours. |
+| `significant_disruption_next_hour` | INTEGER | Binary classification target, carried from `fct_line_hour_targets`. |
+| `positive_event_count` | INTEGER | Number of distinct qualifying events beginning in the label window. |
+| `is_model_eligible` | INTEGER | 1 only when the line has confirmed scheduled service that hour. Training and evaluation filter on this. |
+
 ## Required quality checks
 
 - Unique `alert_id`

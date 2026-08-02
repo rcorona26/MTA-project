@@ -29,6 +29,52 @@ CREATE TABLE fct_line_hour_features (
     PRIMARY KEY (line, prediction_hour_local)
 ) WITHOUT ROWID;
 
+-- System-wide history is materialized into a keyed temp table before the main
+-- insert. As an inline CTE it has no index, and SQLite chose it as the OUTER
+-- loop of the join, rescanning the 1.35M-row line_history co-routine once per
+-- system hour (~7.3e10 row visits, effectively non-terminating). Materializing
+-- it turns that join into a primary-key lookup.
+DROP TABLE IF EXISTS temp.tmp_system_history;
+CREATE TEMP TABLE tmp_system_history (
+    prediction_hour_local TEXT PRIMARY KEY,
+    system_events_1h INTEGER NOT NULL,
+    system_events_3h INTEGER NOT NULL,
+    system_events_6h INTEGER NOT NULL,
+    system_events_24h INTEGER NOT NULL,
+    system_rate_7d REAL
+) WITHOUT ROWID;
+
+INSERT INTO tmp_system_history (
+    prediction_hour_local,
+    system_events_1h,
+    system_events_3h,
+    system_events_6h,
+    system_events_24h,
+    system_rate_7d
+)
+WITH system_hour AS (
+    SELECT
+        prediction_hour_local,
+        sum(positive_event_count) AS system_event_line_starts,
+        avg(significant_disruption_next_hour * 1.0) AS system_positive_line_rate
+    FROM fct_line_hour_targets
+    GROUP BY prediction_hour_local
+)
+SELECT
+    prediction_hour_local,
+    coalesce(sum(system_event_line_starts) OVER system_1h, 0),
+    coalesce(sum(system_event_line_starts) OVER system_3h, 0),
+    coalesce(sum(system_event_line_starts) OVER system_6h, 0),
+    coalesce(sum(system_event_line_starts) OVER system_24h, 0),
+    avg(system_positive_line_rate) OVER system_7d
+FROM system_hour
+WINDOW
+    system_1h AS (ORDER BY prediction_hour_local ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING),
+    system_3h AS (ORDER BY prediction_hour_local ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING),
+    system_6h AS (ORDER BY prediction_hour_local ROWS BETWEEN 6 PRECEDING AND 1 PRECEDING),
+    system_24h AS (ORDER BY prediction_hour_local ROWS BETWEEN 24 PRECEDING AND 1 PRECEDING),
+    system_7d AS (ORDER BY prediction_hour_local ROWS BETWEEN 168 PRECEDING AND 1 PRECEDING);
+
 WITH line_history AS (
     SELECT
         t.*,
@@ -74,30 +120,6 @@ WITH line_history AS (
             PARTITION BY line ORDER BY prediction_hour_local
             ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
         )
-),
-system_hour AS (
-    SELECT
-        prediction_hour_local,
-        sum(positive_event_count) AS system_event_line_starts,
-        avg(significant_disruption_next_hour * 1.0) AS system_positive_line_rate
-    FROM fct_line_hour_targets
-    GROUP BY prediction_hour_local
-),
-system_history AS (
-    SELECT
-        prediction_hour_local,
-        coalesce(sum(system_event_line_starts) OVER system_1h, 0) AS system_events_1h,
-        coalesce(sum(system_event_line_starts) OVER system_3h, 0) AS system_events_3h,
-        coalesce(sum(system_event_line_starts) OVER system_6h, 0) AS system_events_6h,
-        coalesce(sum(system_event_line_starts) OVER system_24h, 0) AS system_events_24h,
-        avg(system_positive_line_rate) OVER system_7d AS system_rate_7d
-    FROM system_hour
-    WINDOW
-        system_1h AS (ORDER BY prediction_hour_local ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING),
-        system_3h AS (ORDER BY prediction_hour_local ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING),
-        system_6h AS (ORDER BY prediction_hour_local ROWS BETWEEN 6 PRECEDING AND 1 PRECEDING),
-        system_24h AS (ORDER BY prediction_hour_local ROWS BETWEEN 24 PRECEDING AND 1 PRECEDING),
-        system_7d AS (ORDER BY prediction_hour_local ROWS BETWEEN 168 PRECEDING AND 1 PRECEDING)
 )
 INSERT INTO fct_line_hour_features (
     line,
@@ -161,7 +183,7 @@ FROM line_history AS h
 JOIN dim_line_hour AS d
   ON d.line = h.line
  AND d.prediction_hour_local = h.prediction_hour_local
-JOIN system_history AS sh
+JOIN tmp_system_history AS sh
   ON sh.prediction_hour_local = h.prediction_hour_local
 LEFT JOIN dim_schedule_date_coverage AS c
   ON c.service_date = substr(h.prediction_hour_local, 1, 10)

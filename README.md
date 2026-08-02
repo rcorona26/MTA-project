@@ -103,11 +103,34 @@ snapshot hash, per-line prevalence, source-quality findings, and limitations.
 monthly aggregate runtime experiment. It is not used by the new alert pipeline
 and should not be described as a next-hour prediction system.
 
+## Model results
+
+Three models were compared on `fct_line_hour_features` using a chronological
+70/15/15 split, with the decision threshold tuned on validation and evaluated
+once on the held-out test set.
+
+| Model | PR-AUC | ROC-AUC | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| Historical-rate baseline | 0.2214 | 0.6576 | 0.2008 | 0.6534 | 0.3072 |
+| Logistic regression | 0.2502 | 0.6914 | 0.2286 | 0.6390 | 0.3368 |
+| **Gradient boosting** | **0.2566** | **0.7100** | **0.2381** | 0.6284 | **0.3454** |
+
+Gradient boosting wins, but its edge over logistic regression is small, and the
+two strongest features are the line's own trailing disruption rate and the hour
+of day — the model is mostly learning which lines are chronically disrupted and
+when, not reacting to evolving conditions. Precision of 0.238 against a 14.4%
+test base rate is a ~1.65x lift. Metrics are precision/recall/PR-AUC rather
+than accuracy, since always predicting "no disruption" would score 86%.
+
+Full setup, feature importances, and limitations:
+[docs/model_results.md](docs/model_results.md). Training code:
+[`train_classifier.py`](train_classifier.py); the fitted model is saved to
+`disruption_gbc_model.joblib` with its feature order and tuned threshold.
+
 ## Next milestone
 
-Both pre-training gates are complete: the schedule-enriched feature build is
-optimized (see indexes in `sql/020_line_hour_targets.sql`), and the 200-row
-human label audit is done (`data/review/label_review_sample.csv`; see
-[docs/target_definition.md](docs/target_definition.md) for the audit result
-and the resulting planned-exclusion rule fix). Next: train historical-rate
-baselines and stronger classifiers on `fct_line_hour_features`.
+The current feature set has largely been mined for structural signal. The
+promising directions are richer dynamic features (weather, incident text from
+`header` / `description`, adjacency between lines sharing track) and calibrated
+probabilities, since the tuned threshold is sensitive to the positive-rate
+drift between the training and test periods.
