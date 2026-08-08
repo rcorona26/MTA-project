@@ -122,6 +122,18 @@ when, not reacting to evolving conditions. Precision of 0.238 against a 14.4%
 test base rate is a ~1.65x lift. Metrics are precision/recall/PR-AUC rather
 than accuracy, since always predicting "no disruption" would score 86%.
 
+### Intended use
+
+At 23.8% precision, roughly three out of four flagged hours turn out to have
+no disruption. Many subway disruptions stem from unpredictable, one-off events
+(medical emergencies, mechanical failures, police activity) rather than
+recurring patterns, so no model trained on historical data alone can reliably
+forecast them in advance. This project is intended as a **prioritization
+tool** — helping identify which lines are relatively more likely to see
+trouble in a given hour, based on historical patterns — not as an automated
+alerting system. It should not be used to trigger unattended alerts or
+actions.
+
 Full setup, feature importances, and limitations:
 [docs/model_results.md](docs/model_results.md). Training code:
 [`train_classifier.py`](train_classifier.py); the fitted model is saved to
