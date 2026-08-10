@@ -105,6 +105,71 @@ decimal flips the comparison and sends the row down a completely different
 subtree. It moved test predictions by up to 0.036. There is now an assertion
 guarding this. Do not "tidy" it away to save file size.
 
+## Web development notes for Andy and Robert
+
+*Putting on my web-development-professor hat for this section: the dashboard is
+part of your argument, not decorative packaging around it.*
+
+**Andy:** you own the reader's path through the page. The first screen now does
+the right work: it states the conclusion, defines the target, shows the operating
+metrics, and places the responsible-use warning beside them. Preserve that
+hierarchy. Do not replace the conclusion with a generic project title, move the
+warning to the footer, or add a splashy hero that delays the evidence. A recruiter
+should understand the result in under a minute; a professor should be able to
+find the methodological qualification without hunting for it.
+
+**Robert:** you own the contract between the data exports and the interface.
+`docs/dashboard_template.html` is the source; `docs/dashboard.html` is generated.
+If you edit the generated file directly, the next build will erase your work.
+Likewise, the feature order, full-precision split thresholds, score histograms,
+and profile data are model artifacts, not convenient front-end constants. When a
+number in the prose disagrees with the embedded bundle, investigate and disclose
+the disagreement rather than forcing the interface to reproduce the prose.
+
+**Both of you:** the identity-versus-history comparison is the visual thesis of
+the project. Be ready to explain what each pair holds constant. "Profile on"
+loads a line's typical historical conditions; "profile off" freezes the current
+conditions and changes only line identity. If that switch ever changes hidden
+history values while it is off, the comparison is no longer valid even if the
+screen still looks convincing.
+
+### What I would check in a code review
+
+- **Semantics before styling.** Keep one `h1`, a real `nav`, labeled controls,
+  ordered headings, buttons for actions, and live regions only for results that
+  actually change. A keyboard user must be able to reach every interaction and
+  see where focus is.
+- **Mobile is a requirement, not a shrink pass.** Test at 375–390 px after every
+  structural change. The page must not scroll horizontally; route controls,
+  confusion-matrix labels, charts, and technical tables all need deliberate
+  small-screen behavior.
+- **Color is supporting information.** MTA route colors may identify a series or
+  line, but the route letter, label, and value must remain available without
+  color. Never turn the dashboard into an unlabeled subway-map motif.
+- **Scores are not probabilities.** Search the rendered page for "probability,"
+  "chance," and "risk percentage" before presenting. Those terms are acceptable
+  only when explicitly explaining why the raw score cannot be read that way.
+- **Static means genuinely static.** A successful review build should make no
+  CDN, font, analytics, image, or API requests. Test the generated artifact, not
+  just the template, and keep GitHub Pages deployment boring.
+- **Interaction claims need regression tests.** At minimum, guard the 0.58
+  operating point, browser-equivalent tree traversal, profile-switch behavior,
+  feature order, drift-band dates, and complete placeholder replacement.
+
+### Presentation advice
+
+Do not demo every chart. Start with the key finding, use the threshold explorer
+to show why no operating point rescues the model, then use the live predictor to
+separate line identity from recent history. Open the detailed evidence only when
+the audience asks how you know. That sequence demonstrates both technical depth
+and editorial judgment—which is what a strong portfolio project should do.
+
+One last grading note: polish is not the same as complexity. The strongest
+front-end decision here is that a half-megabyte static file can explain and run a
+300-tree model without a framework or server. Keep the implementation legible,
+keep the claims narrower than the evidence, and resist adding technology merely
+to make the stack sound larger.
+
 ## Suggested division of labor
 
 Robert — you own the data and target sections. You have the strongest claim to

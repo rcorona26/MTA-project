@@ -8,17 +8,17 @@ so it can be opened directly or published as-is.
 """
 
 import json
+from pathlib import Path
 
-TEMPLATE = "docs/dashboard_template.html"
-DATA = "docs/dashboard_data.json"
-MODEL = "docs/model_bundle.json"
-OUTPUT = "docs/dashboard.html"
+ROOT = Path(__file__).resolve().parent
+TEMPLATE = ROOT / "docs/dashboard_template.html"
+DATA = ROOT / "docs/dashboard_data.json"
+MODEL = ROOT / "docs/model_bundle.json"
+OUTPUT = ROOT / "docs/dashboard.html"
 
 
-def main():
-    template = open(TEMPLATE).read()
-    data = json.load(open(DATA))
-    model = json.load(open(MODEL))
+def render_page(template, data, model):
+    """Inject exported payloads and metadata into the standalone template."""
     meta = data["meta"]
 
     page = (
@@ -33,10 +33,18 @@ def main():
     leftover = [line for line in page.splitlines() if "__" in line and "__main__" not in line]
     if leftover:
         raise SystemExit(f"unsubstituted placeholder: {leftover[0].strip()[:80]}")
+    return page
+
+
+def main():
+    template = open(TEMPLATE).read()
+    data = json.load(open(DATA))
+    model = json.load(open(MODEL))
+    page = render_page(template, data, model)
 
     with open(OUTPUT, "w") as handle:
         handle.write(page)
-    print(f"Wrote {OUTPUT} ({len(page):,} bytes)")
+    print(f"Wrote {OUTPUT.relative_to(ROOT)} ({len(page):,} bytes)")
 
 
 if __name__ == "__main__":
