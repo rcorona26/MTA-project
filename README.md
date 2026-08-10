@@ -127,6 +127,40 @@ Full setup, feature importances, and limitations:
 [`train_classifier.py`](train_classifier.py); the fitted model is saved to
 `disruption_gbc_model.joblib` with its feature order and tuned threshold.
 
+## Interactive dashboard
+
+[`docs/dashboard.html`](docs/dashboard.html) is a self-contained review page —
+no external scripts, styles, fonts, or server. Alongside the static charts it
+carries two interactive sections:
+
+- **Threshold explorer.** Drag the decision threshold and the confusion matrix,
+  precision, recall, F1, and lift recompute against the held-out test set.
+  Counts are exact, read from suffix sums over the model's test-set score
+  histograms rather than a re-scored sample.
+- **Live predictor.** Describe a line-hour and the fitted model scores it in the
+  browser. The 300 boosted trees are embedded as JSON and traversed directly,
+  reproducing scikit-learn to within 3e-9 — verified by an assertion at export
+  time, which refuses to write a bundle that disagrees. Split thresholds are
+  exported at full float precision on purpose; rounding them to 6dp moves
+  predictions by up to 0.036, because a rounded threshold flips a comparison and
+  routes the row down a different subtree.
+
+Because inference runs client-side, the page is a static file and deploys
+anywhere. Rebuild it with:
+
+```bash
+python train_classifier.py       # fits and saves disruption_gbc_model.joblib
+python export_dashboard_data.py  # metrics, PR curves, calibration, prevalence
+python export_model_bundle.py    # trees, reference scenario, score histograms
+python build_dashboard.py        # injects both payloads into the template
+```
+
+`docs/dashboard_template.html` is the source; `docs/dashboard.html` is generated
+and should not be hand-edited.
+
+Teaching notes on how to read the results, and what not to claim from them, are
+in [docs/NOTES.md](docs/NOTES.md).
+
 ## Next milestone
 
 The current feature set has largely been mined for structural signal. The

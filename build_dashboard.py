@@ -11,17 +11,20 @@ import json
 
 TEMPLATE = "docs/dashboard_template.html"
 DATA = "docs/dashboard_data.json"
+MODEL = "docs/model_bundle.json"
 OUTPUT = "docs/dashboard.html"
 
 
 def main():
     template = open(TEMPLATE).read()
     data = json.load(open(DATA))
+    model = json.load(open(MODEL))
     meta = data["meta"]
 
     page = (
         template
         .replace("__DATA__", json.dumps(data, separators=(",", ":")))
+        .replace("__MODEL__", json.dumps(model, separators=(",", ":")))
         .replace("__SNAP_START__", meta["snapshot_start"])
         .replace("__SNAP_END__", meta["snapshot_end"])
         .replace("__ROWS__", f"{meta['rows']:,}")

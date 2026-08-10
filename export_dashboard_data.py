@@ -184,6 +184,9 @@ def main():
             "test_rate": round(float(test[TARGET_COL].mean()), 4),
             "snapshot_end": str(df["prediction_hour_local"].max())[:10],
             "snapshot_start": str(df["prediction_hour_local"].min())[:10],
+            # Month keys, used to shade the test period on the drift chart.
+            "train_end": str(train["prediction_hour_local"].max())[:7],
+            "test_start": str(test["prediction_hour_local"].min())[:7],
         },
         "models": results,
         "pr_curves": curves,

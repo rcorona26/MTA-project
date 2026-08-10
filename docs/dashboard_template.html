@@ -164,6 +164,67 @@
   footer { border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: 0.82rem; color: var(--ink-3); display: flex; flex-direction: column; gap: 0.4rem; }
   code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; background: var(--plane); padding: 0.1em 0.35em; border-radius: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  /* ---------- goals / findings ---------- */
+  .goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem 1.75rem; }
+  .goal h3 { font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; margin: 0 0 0.45rem; }
+  .goal p { font-size: 0.9rem; color: var(--ink-2); }
+  .goal ul { margin: 0; padding-left: 1.05rem; font-size: 0.9rem; color: var(--ink-2); display: flex; flex-direction: column; gap: 0.35rem; }
+  .goal li::marker { color: var(--ink-3); }
+  .goal strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- interactive controls ---------- */
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 0.9rem 1.4rem; }
+  .ctl { display: flex; flex-direction: column; gap: 0.3rem; }
+  .ctl label { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .ctl label b { font-family: var(--body); font-size: 0.85rem; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl .hint { font-size: 0.74rem; color: var(--ink-3); }
+
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; cursor: pointer; margin: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--grid); }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--grid); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--s1); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--rule); margin-top: -5.5px; }
+  input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: var(--s1); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--rule); }
+
+  select { font-family: var(--body); font-size: 0.87rem; color: var(--ink); background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; padding: 0.35rem 0.5rem; width: 100%; }
+
+  .switch { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.85rem; color: var(--ink-2); cursor: pointer; max-width: 62ch; }
+  .switch input { margin: 0.25rem 0 0; accent-color: var(--s1); flex: none; }
+
+  .btn { font-family: var(--sans); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ink-2); background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; padding: 0.4rem 0.7rem; cursor: pointer; }
+  .btn:hover { color: var(--ink); border-color: var(--axis); }
+
+  /* route bullet picker */
+  .picker { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .picker button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; font-family: var(--sans); font-weight: 700; cursor: pointer; padding: 0; line-height: 1; opacity: 0.42; transition: opacity .12s, border-color .12s; }
+  .picker button:hover { opacity: 0.8; }
+  .picker button[aria-pressed="true"] { opacity: 1; border-color: var(--ink); }
+
+  /* readout */
+  .readout { display: grid; grid-template-columns: minmax(190px, 0.85fr) 1.15fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 620px) { .readout { grid-template-columns: 1fr; } }
+  .score { display: flex; flex-direction: column; gap: 0.3rem; padding: 1rem 1.1rem; background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; }
+  .score .k { font-family: var(--sans); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; }
+  .score .v { font-family: var(--sans); font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .score .s { font-size: 0.8rem; color: var(--ink-2); }
+  .verdict { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 2px; align-self: flex-start; color: var(--chip-ink); }
+  .verdict.flag { background: var(--crit); }
+  .verdict.clear { background: var(--good); }
+
+  /* confusion matrix */
+  .cm { display: grid; grid-template-columns: auto 1fr 1fr; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; font-variant-numeric: tabular-nums; }
+  .cm > div { background: var(--surface); padding: 0.6rem 0.7rem; }
+  .cm .hd { font-family: var(--sans); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 700; display: flex; align-items: center; }
+  .cm .cell { display: flex; flex-direction: column; gap: 0.1rem; }
+  .cm .cell .n { font-family: var(--sans); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+  .cm .cell .l { font-size: 0.72rem; color: var(--ink-3); }
+  .cm .cell.hit .n { color: var(--good); }
+  .cm .cell.miss .n { color: var(--crit); }
+
+  .statrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .statrow > div { background: var(--surface); padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .statrow .k { font-family: var(--sans); font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); font-weight: 700; }
+  .statrow .v { font-family: var(--sans); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
 </style>
 
 <div class="wrap">
@@ -183,6 +244,54 @@
       <span>Target <b>significant_disruption_next_hour</b></span>
     </div>
   </header>
+
+  <section class="card">
+    <header>
+      <h2>What this project asked, and what it found</h2>
+    </header>
+    <div class="goals">
+      <div class="goal">
+        <h3>The question</h3>
+        <p>
+          Given only what was knowable at the top of hour <code>t</code>, can we
+          predict whether the MTA will publish a new unplanned delay or suspension
+          alert for a given subway line during <code>[t, t+1h)</code>?
+        </p>
+      </div>
+      <div class="goal">
+        <h3>How it was built</h3>
+        <ul>
+          <li>An immutable, hash-manifested snapshot of the public alerts feed — reproducible from scratch.</li>
+          <li>A <strong>leakage-safe</strong> feature layer: every input computed strictly before <code>t</code>.</li>
+          <li>A <strong>chronological</strong> 70/15/15 split, never shuffled, because this is forecasting.</li>
+          <li>Threshold tuned on validation, then the test set touched exactly once.</li>
+        </ul>
+      </div>
+      <div class="goal">
+        <h3>What we found</h3>
+        <ul>
+          <li>The signal is <strong>real but modest</strong> — 1.65× precision over the base rate.</li>
+          <li>It is almost entirely <strong>structural</strong>: which line, and what hour.</li>
+          <li>Gradient boosting beats logistic regression by 0.006 PR-AUC — the complexity barely pays.</li>
+          <li>Scores <strong>rank</strong> hours usefully but are <strong>not calibrated probabilities</strong>.</li>
+        </ul>
+      </div>
+      <div class="goal">
+        <h3>What it cannot support</h3>
+        <ul>
+          <li>Any claim about <strong>train lateness</strong> — the label tracks MTA alerting behavior.</li>
+          <li>Any <strong>causal</strong> reading of the feature importances.</li>
+          <li>A customer-facing alert: at this operating point it would cry wolf ~3 times in 4.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">
+      The two sections marked <b>interactive</b> below run the actual fitted
+      model in your browser — the 300 boosted trees are embedded in this page and
+      traversed directly, reproducing scikit-learn's output to within 3&times;10<sup>-9</sup>.
+      Nothing is precomputed or approximated, and no server is involved.
+    </p>
+  </section>
 
   <section class="tiles">
     <div class="tile">
@@ -265,6 +374,177 @@
       </div>
     </section>
   </div>
+
+  <section class="card">
+    <header>
+      <p class="eyebrow">Interactive</p>
+      <h2>Choose the operating point</h2>
+      <p class="note">
+        The threshold is the only knob that matters operationally, and there is no
+        objectively right setting — it is a choice about which error you would
+        rather make. Drag it and watch the same 157,922 held-out hours get sorted
+        differently. Counts are exact, recomputed from the model's test-set score
+        distribution.
+      </p>
+    </header>
+
+    <div class="ctl">
+      <label for="thr-slider">Decision threshold <b id="thr-val">0.58</b></label>
+      <input type="range" id="thr-slider" min="0.02" max="0.98" step="0.01" value="0.58">
+      <span class="hint" id="thr-hint"></span>
+    </div>
+
+    <div class="readout">
+      <div class="cm" id="cm">
+        <div class="hd"></div>
+        <div class="hd">Disruption occurred</div>
+        <div class="hd">No disruption</div>
+        <div class="hd">Model flagged</div>
+        <div class="cell hit"><span class="n" id="cm-tp">—</span><span class="l">true positive</span></div>
+        <div class="cell miss"><span class="n" id="cm-fp">—</span><span class="l">false alarm</span></div>
+        <div class="hd">Model stayed quiet</div>
+        <div class="cell miss"><span class="n" id="cm-fn">—</span><span class="l">missed disruption</span></div>
+        <div class="cell hit"><span class="n" id="cm-tn">—</span><span class="l">true negative</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.9rem">
+        <div class="statrow">
+          <div><span class="k">Precision</span><span class="v" id="s-prec">—</span></div>
+          <div><span class="k">Recall</span><span class="v" id="s-rec">—</span></div>
+          <div><span class="k">F1</span><span class="v" id="s-f1">—</span></div>
+          <div><span class="k">Lift</span><span class="v" id="s-lift">—</span></div>
+        </div>
+        <p class="note" id="thr-plain"></p>
+      </div>
+    </div>
+
+    <div class="legend" id="l-thr"></div>
+    <div class="chartbox"><div id="c-thr"></div><div class="tip" id="t-thr"></div></div>
+    <p class="note">
+      The vertical rule marks your current threshold. <b>0.58</b> is the
+      F1-optimal point chosen on validation and reported in the tables above —
+      note that F1 is itself an arbitrary tiebreaker, weighting a missed
+      disruption exactly as costly as a false alarm.
+    </p>
+  </section>
+
+  <section class="card">
+    <header>
+      <p class="eyebrow">Interactive</p>
+      <h2>Run the model on an hour you invent</h2>
+      <p class="note">
+        Describe a line-hour and the fitted gradient boosting model scores it live.
+        The most useful thing to do here is to try to move the score <em>without</em>
+        touching the line or the hour — the difficulty of doing so is the central
+        finding of this project, made tangible.
+      </p>
+    </header>
+
+    <div class="ctl">
+      <label>Line</label>
+      <div class="picker" id="line-picker" role="group" aria-label="Subway line"></div>
+    </div>
+
+    <label class="switch">
+      <input type="checkbox" id="opt-profile" checked>
+      <span>
+        When I pick a line, also move its history sliders to that line's typical
+        values. Uncheck to hold history fixed and let the line buttons change
+        nothing but the one-hot indicator.
+      </span>
+    </label>
+
+    <div class="callout">
+      <h3>Try this: separate a line's identity from its history</h3>
+      <p>
+        With the switch on, the <b>A</b> scores <b>0.637</b> and the 42nd St
+        shuttle <b>0.012</b>. Turn the switch off, so history stays frozen at a
+        generic hour and only the one-hot moves: the same two lines score
+        <b>0.393</b> and <b>0.260</b>. Identity alone is worth about 0.13 of
+        separation; the trailing disruption history is worth roughly twice that.
+        The model has not learned that the A is the A — it has learned that the A
+        has been breaking down lately.
+      </p>
+    </div>
+
+    <div class="controls">
+      <div class="ctl">
+        <label for="f-hour">Hour of day <b id="v-hour">8 AM</b></label>
+        <input type="range" id="f-hour" min="0" max="23" step="1" value="8">
+      </div>
+      <div class="ctl">
+        <label for="f-dow">Day of week</label>
+        <select id="f-dow">
+          <option value="1">Monday</option><option value="2">Tuesday</option>
+          <option value="3" selected>Wednesday</option><option value="4">Thursday</option>
+          <option value="5">Friday</option><option value="6">Saturday</option>
+          <option value="0">Sunday</option>
+        </select>
+      </div>
+      <div class="ctl">
+        <label for="f-month">Month <b id="v-month">June</b></label>
+        <input type="range" id="f-month" min="1" max="12" step="1" value="6">
+      </div>
+      <div class="ctl">
+        <label for="f-rate30">Line's trailing 30-day rate <b id="v-rate30">—</b></label>
+        <input type="range" id="f-rate30" min="0" max="0.45" step="0.005" value="0.1">
+        <span class="hint">Share of this line's last 30 days of hours that were disrupted.</span>
+      </div>
+      <div class="ctl">
+        <label for="f-line3h">Incidents on this line, last 3h <b id="v-line3h">—</b></label>
+        <input type="range" id="f-line3h" min="0" max="8" step="1" value="0">
+      </div>
+      <div class="ctl">
+        <label for="f-sys3h">System-wide incidents, last 3h <b id="v-sys3h">—</b></label>
+        <input type="range" id="f-sys3h" min="0" max="60" step="1" value="10">
+      </div>
+      <div class="ctl">
+        <label for="f-since">Hours since last disruption <b id="v-since">—</b></label>
+        <input type="range" id="f-since" min="0" max="72" step="1" value="12">
+      </div>
+      <div class="ctl">
+        <label for="f-sched">Scheduled departures this hour <b id="v-sched">—</b></label>
+        <input type="range" id="f-sched" min="0" max="1200" step="10" value="400">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      <button class="btn" id="btn-reset">Reset to a typical hour</button>
+      <button class="btn" id="btn-worst">Busy weekday peak</button>
+      <button class="btn" id="btn-best">Quiet overnight</button>
+    </div>
+
+    <div class="readout">
+      <div class="score">
+        <span class="k">Model score</span>
+        <span class="v" id="p-score">—</span>
+        <span class="verdict" id="p-verdict">—</span>
+        <span class="s" id="p-pctile"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.9rem">
+        <div class="statrow">
+          <div><span class="k">Historical rate at this score</span><span class="v" id="p-cal">—</span></div>
+          <div><span class="k">Overall base rate</span><span class="v" id="p-base">14.4%</span></div>
+        </div>
+        <p class="note">
+          <b>The score is not a probability.</b> Because the model was fit with
+          <code>class_weight="balanced"</code>, its output is inflated by design. The
+          left figure is the raw score; the honest reading is the middle figure —
+          the rate actually observed among held-out hours the model scored this
+          highly, read off the calibration curve above.
+        </p>
+      </div>
+    </div>
+
+    <div class="legend" id="l-attr"></div>
+    <div class="chartbox"><div id="c-attr"></div><div class="tip" id="t-attr"></div></div>
+    <p class="note">
+      Attribution is <em>leave-one-group-out</em>: each bar is how much the log-odds
+      move when that group of inputs is reset to the reference hour while
+      everything else stays as you set it. Groups interact, so the bars do not sum
+      to the total — this is an honest sensitivity readout, not a SHAP
+      decomposition.
+    </p>
+  </section>
 
   <section class="card">
     <header>
@@ -380,6 +660,7 @@
 
 <script>
 const DATA = __DATA__;
+const MODEL = __MODEL__;
 
 const MTA = {
   "1":["#EE352E","#fff"],"2":["#EE352E","#fff"],"3":["#EE352E","#fff"],
@@ -475,6 +756,12 @@ function lineChart(hostId, tipId, series, o) {
   if (o.diagonal)
     el("line", {x1: sx(x0), y1: sy(y0), x2: sx(Math.min(x1, y1)), y2: sy(Math.min(x1, y1)),
       stroke: css("--ink-3"), "stroke-width": 1.5, "stroke-dasharray": "5 4"}, s);
+  if (o.vRule !== undefined) {
+    el("line", {x1: sx(o.vRule), x2: sx(o.vRule), y1: m.t, y2: m.t + ih,
+      stroke: css("--ink"), "stroke-width": 1.5}, s);
+    el("text", {x: sx(o.vRule), y: m.t - 3, class: "axis-title", "text-anchor": "middle",
+      fill: css("--ink")}, s).textContent = o.vLabel || "";
+  }
 
   el("text", {x: m.l, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
   el("text", {x: 0, y: 0, class: "axis-title",
@@ -583,6 +870,367 @@ function hbarChart(hostId, tipId, items, o) {
   });
   el("line", {x1: labelW, x2: labelW, y1: 4, y2: H - 18, class: "baseline"}, s);
   el("text", {x: labelW, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
+}
+
+/* ================= live model inference =================
+   The 300 boosted trees are embedded in MODEL.trees. Each node is
+   [feature_idx, threshold, left, right, missing_go_to_left]; a leaf is
+   [-1, value, 0, 0, 0]. This mirrors sklearn's traversal exactly and is
+   verified against it at export time (see export_model_bundle.py).        */
+
+const FIDX = {};
+MODEL.feature_columns.forEach((name, i) => { FIDX[name] = i; });
+
+function rawScore(vec) {
+  let total = MODEL.baseline_prediction;
+  const trees = MODEL.trees;
+  for (let t = 0; t < trees.length; t++) {
+    const tree = trees[t];
+    let i = 0;
+    for (;;) {
+      const n = tree[i];
+      if (n[0] === -1) { total += n[1]; break; }
+      const v = vec[n[0]];
+      if (v !== v) i = n[4] ? n[2] : n[3];        // NaN routes as sklearn does
+      else i = v <= n[1] ? n[2] : n[3];
+    }
+  }
+  return total;
+}
+const sigmoid = z => 1 / (1 + Math.exp(-z));
+
+/* Turn a {featureName: value} scenario into the dense vector the trees index. */
+function vectorize(scen) {
+  const vec = new Float64Array(MODEL.feature_columns.length);
+  for (const k in scen) { const i = FIDX[k]; if (i !== undefined) vec[i] = scen[k]; }
+  return vec;
+}
+const scoreOf = scen => sigmoid(rawScore(vectorize(scen)));
+
+/* Reference line: median prevalence, so "typical" is not an extreme. */
+const REF_LINE = (() => {
+  const s = [...DATA.by_line].sort((a, b) => a.prevalence - b.prevalence);
+  return s[Math.floor(s.length / 2)].line;
+})();
+
+/* A scenario is the exported reference hour, overlaid with one line's typical
+   history and that line's one-hot indicator. */
+function baseScenario(line, applyProfile) {
+  const scen = Object.assign({}, MODEL.reference);
+  MODEL.lines.forEach(l => { scen["line_" + l] = 0; });
+  if (FIDX["line_" + line] !== undefined) scen["line_" + line] = 1;
+  if (applyProfile !== false && MODEL.line_profile[line])
+    Object.assign(scen, MODEL.line_profile[line]);
+  return scen;
+}
+const REF_SCEN = baseScenario(REF_LINE, true);
+
+/* Attribution groups: leave-one-group-out against the reference hour. */
+const ATTR_GROUPS = [
+  ["Line's disruption history", ["line_positive_rate_prior_7d", "line_positive_rate_prior_30d"]],
+  ["Hour of day", ["hour_of_day"]],
+  ["Line identity (one-hot)", MODEL.lines.map(l => "line_" + l)],
+  ["Day of week / weekend", ["day_of_week", "is_weekend"]],
+  ["Recent incidents, this line", ["line_event_starts_prior_1h", "line_event_starts_prior_3h",
+    "line_event_starts_prior_6h", "line_event_starts_prior_24h", "hours_since_line_disruption"]],
+  ["Recent incidents, system-wide", ["system_event_line_starts_prior_1h", "system_event_line_starts_prior_3h",
+    "system_event_line_starts_prior_6h", "system_event_line_starts_prior_24h",
+    "system_positive_line_rate_prior_7d"]],
+  ["Scheduled service volume", ["scheduled_revenue_stop_departures", "line_history_hours"]],
+  ["Month", ["calendar_month"]]
+];
+
+function attribution(scen) {
+  const full = rawScore(vectorize(scen));
+  return ATTR_GROUPS.map(([name, keys]) => {
+    const counterfactual = Object.assign({}, scen);
+    keys.forEach(k => { if (k in REF_SCEN) counterfactual[k] = REF_SCEN[k]; });
+    return {key: name, value: full - rawScore(vectorize(counterfactual))};
+  }).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+}
+
+/* ---------- threshold explorer maths ----------
+   Suffix sums over the exported test-set score histograms give the exact
+   confusion matrix at any bin edge, without shipping 157,922 raw scores. */
+const TS = MODEL.test_scores;
+const SUF_POS = new Float64Array(TS.bins + 1);
+const SUF_NEG = new Float64Array(TS.bins + 1);
+for (let i = TS.bins - 1; i >= 0; i--) {
+  SUF_POS[i] = SUF_POS[i + 1] + TS.positives[i];
+  SUF_NEG[i] = SUF_NEG[i + 1] + TS.negatives[i];
+}
+function confusion(threshold) {
+  const k = Math.min(TS.bins, Math.max(0, Math.round(threshold * TS.bins)));
+  const tp = SUF_POS[k], fp = SUF_NEG[k];
+  const fn = TS.n_pos - tp, tn = TS.n_neg - fp;
+  const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+  const recall = TS.n_pos > 0 ? tp / TS.n_pos : 0;
+  const f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+  return {tp, fp, fn, tn, precision, recall, f1};
+}
+const BASE_RATE = TS.n_pos / (TS.n_pos + TS.n_neg);
+
+/* Score -> historically observed rate, interpolated off the calibration curve.
+   This is the honest reading of an uncalibrated score. */
+function calibratedRate(score) {
+  const c = DATA.calibration;
+  if (score <= c[0][0]) return {v: c[0][1], approx: true};
+  if (score >= c[c.length - 1][0]) return {v: c[c.length - 1][1], approx: true};
+  for (let i = 1; i < c.length; i++) {
+    if (score <= c[i][0]) {
+      const t = (score - c[i - 1][0]) / (c[i][0] - c[i - 1][0]);
+      return {v: c[i - 1][1] + t * (c[i][1] - c[i - 1][1]), approx: false};
+    }
+  }
+  return {v: c[c.length - 1][1], approx: true};
+}
+
+/* Where this score falls among all held-out hours. */
+function percentile(score) {
+  const k = Math.min(TS.bins, Math.max(0, Math.round(score * TS.bins)));
+  const above = SUF_POS[k] + SUF_NEG[k];
+  return 1 - above / (TS.n_pos + TS.n_neg);
+}
+
+/* ================= interactive: threshold explorer ================= */
+function renderThreshold() {
+  const thr = parseFloat(document.getElementById("thr-slider").value);
+  const c = confusion(thr);
+  const n = v => Math.round(v).toLocaleString();
+
+  document.getElementById("thr-val").textContent = thr.toFixed(2);
+  document.getElementById("cm-tp").textContent = n(c.tp);
+  document.getElementById("cm-fp").textContent = n(c.fp);
+  document.getElementById("cm-fn").textContent = n(c.fn);
+  document.getElementById("cm-tn").textContent = n(c.tn);
+  document.getElementById("s-prec").textContent = pct(c.precision);
+  document.getElementById("s-rec").textContent = pct(c.recall);
+  document.getElementById("s-f1").textContent = c.f1.toFixed(3);
+  document.getElementById("s-lift").textContent = (c.precision / BASE_RATE).toFixed(2) + "×";
+
+  const flagged = c.tp + c.fp;
+  document.getElementById("thr-hint").textContent =
+    `Flags ${n(flagged)} of ${n(TS.n_pos + TS.n_neg)} held-out hours ` +
+    `(${pct(flagged / (TS.n_pos + TS.n_neg))}).`;
+  document.getElementById("thr-plain").innerHTML =
+    `In plain terms: of every 100 hours this setting flags, about ` +
+    `<b>${Math.round(c.precision * 100)}</b> actually see a disruption, and it ` +
+    `catches <b>${Math.round(c.recall * 100)}%</b> of the disruptions that happen. ` +
+    `It misses <b>${n(c.fn)}</b> of them.`;
+
+  const S = [css("--s1"), css("--s2"), css("--s3")];
+  const pts = {p: [], r: [], f: []};
+  for (let i = 2; i <= 98; i++) {
+    const t = i / 100, x = confusion(t);
+    pts.p.push([t, x.precision]); pts.r.push([t, x.recall]); pts.f.push([t, x.f1]);
+  }
+  const series = [
+    {name: "Precision", color: S[0], points: pts.p},
+    {name: "Recall", color: S[1], points: pts.r},
+    {name: "F1", color: S[2], points: pts.f}
+  ];
+  legend("l-thr", series);
+  lineChart("c-thr", "t-thr", series, {
+    label: "Precision, recall and F1 across every decision threshold", height: 280,
+    xDomain: [0, 1], yDomain: [0, 1],
+    xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1],
+    xFmt: v => v.toFixed(2), yFmt: pct0, refLine: BASE_RATE,
+    vRule: thr, vLabel: "your threshold",
+    xTitle: "Decision threshold", yTitle: "Score",
+    tipLabel: v => "Threshold " + v.toFixed(2), tipFmt: v => pct(v)
+  });
+}
+
+/* ================= interactive: live predictor ================= */
+const MONTHS = ["", "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+const hourLabel = h => h === 0 ? "12 AM" : h < 12 ? h + " AM" : h === 12 ? "12 PM" : (h - 12) + " PM";
+
+const P = {line: REF_LINE};
+const $ = id => document.getElementById(id);
+
+/* The sliders that map one-to-one onto a model feature. */
+const SLIDERS = [
+  ["f-rate30", "line_positive_rate_prior_30d", "v-rate30", v => pct(v)],
+  ["f-line3h", "line_event_starts_prior_3h", "v-line3h", v => v.toFixed(0)],
+  ["f-sys3h", "system_event_line_starts_prior_3h", "v-sys3h", v => v.toFixed(0)],
+  ["f-since", "hours_since_line_disruption", "v-since", v => v.toFixed(0) + " h"],
+  ["f-sched", "scheduled_revenue_stop_departures", "v-sched", v => Math.round(v).toLocaleString()]
+];
+
+/* Move the history sliders onto either this line's typical values or the
+   generic reference hour. Without this the profile switch would be inert:
+   the sliders would still be holding the previous line's profile, so the only
+   thing changing would be features the sliders immediately overwrite. */
+function applyLineFeatures() {
+  const src = $("opt-profile").checked
+    ? Object.assign({}, MODEL.reference, MODEL.line_profile[P.line] || {})
+    : MODEL.reference;
+  SLIDERS.forEach(([id, feat]) => { if (feat in src) $(id).value = src[feat]; });
+}
+
+/* Push a scenario object out into the controls. */
+function loadScenario(scen) {
+  $("f-hour").value = scen.hour_of_day;
+  $("f-month").value = scen.calendar_month;
+  $("f-dow").value = String(scen.day_of_week);
+  SLIDERS.forEach(([id, feat]) => { $(id).value = scen[feat]; });
+}
+
+/* Read the controls back into a full feature scenario. */
+function currentScenario() {
+  const scen = baseScenario(P.line, $("opt-profile").checked);
+  scen.hour_of_day = +$("f-hour").value;
+  scen.calendar_month = +$("f-month").value;
+  const dow = +$("f-dow").value;
+  scen.day_of_week = dow;
+  scen.is_weekend = (dow === 0 || dow === 6) ? 1 : 0;
+  SLIDERS.forEach(([id, feat]) => { scen[feat] = +$(id).value; });
+  // Keep the correlated trailing windows coherent rather than letting the user
+  // set a 30-day rate that contradicts the 7-day one the profile supplied.
+  scen.line_positive_rate_prior_7d = scen.line_positive_rate_prior_30d;
+  scen.line_event_starts_prior_1h = Math.min(scen.line_event_starts_prior_3h, 2);
+  scen.line_event_starts_prior_6h = scen.line_event_starts_prior_3h * 1.6;
+  scen.system_event_line_starts_prior_1h = scen.system_event_line_starts_prior_3h / 3;
+  scen.system_event_line_starts_prior_6h = scen.system_event_line_starts_prior_3h * 1.7;
+  return scen;
+}
+
+function renderPredictor() {
+  const scen = currentScenario();
+  const score = scoreOf(scen);
+  const thr = parseFloat($("thr-slider").value);
+
+  $("v-hour").textContent = hourLabel(+$("f-hour").value);
+  $("v-month").textContent = MONTHS[+$("f-month").value];
+  SLIDERS.forEach(([id, feat, out, fmt]) => { $(out).textContent = fmt(+$(id).value); });
+
+  $("p-score").textContent = score.toFixed(3);
+  const v = $("p-verdict");
+  v.textContent = score >= thr ? "Would flag" : "Would stay quiet";
+  v.className = "verdict " + (score >= thr ? "flag" : "clear");
+  $("p-pctile").textContent =
+    `Higher than ${pct0(percentile(score))} of held-out hours · threshold ${thr.toFixed(2)}`;
+
+  const cal = calibratedRate(score);
+  $("p-cal").textContent = (cal.approx ? "≈" : "") + pct(cal.v);
+  $("p-base").textContent = pct(BASE_RATE);
+
+  const attr = attribution(scen);
+  const up = css("--s2"), down = css("--s1");
+  legend("l-attr", [
+    {name: "Raises the score", color: up},
+    {name: "Lowers the score", color: down}
+  ]);
+  divergingBars("c-attr", "t-attr", attr, {
+    label: "Leave-one-group-out sensitivity, in log-odds",
+    pos: up, neg: down
+  });
+}
+
+/* Diverging horizontal bars around a zero axis, for the attribution readout. */
+function divergingBars(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const rowH = 30, W = 820, labelW = 250;
+  const H = items.length * rowH + 30;
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - labelW - 90;
+  const max = Math.max(0.05, ...items.map(i => Math.abs(i.value))) * 1.05;
+  const zero = labelW + iw / 2;
+  const sx = v => zero + v / max * (iw / 2);
+  const tip = tipFor(hostId, tipId);
+
+  items.forEach((it, i) => {
+    const y = i * rowH + 8;
+    el("text", {x: labelW - 12, y: y + 15, class: "tick", "text-anchor": "end"}, s)
+      .textContent = it.key;
+    const x = Math.min(zero, sx(it.value));
+    const w = Math.max(1.5, Math.abs(sx(it.value) - zero));
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x, y: y + 3, width: w, height: rowH - 12, rx: 3,
+      fill: it.value >= 0 ? o.pos : o.neg}, g);
+    el("rect", {x: labelW, y, width: iw, height: rowH, fill: "transparent"}, g);
+    const lx = it.value >= 0 ? sx(it.value) + 7 : sx(it.value) - 7;
+    el("text", {x: lx, y: y + 15, class: "tick", fill: css("--ink-2"),
+      "text-anchor": it.value >= 0 ? "start" : "end"}, g)
+      .textContent = (it.value >= 0 ? "+" : "") + it.value.toFixed(3);
+    g.addEventListener("mousemove", ev => tip.show(
+      `<b>${it.key}</b><div class="row"><span>Log-odds shift</span>` +
+      `<span>${(it.value >= 0 ? "+" : "") + it.value.toFixed(4)}</span></div>`, ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+  });
+  el("line", {x1: zero, x2: zero, y1: 4, y2: H - 18, class: "baseline"}, s);
+  el("text", {x: labelW, y: H - 4, class: "axis-title"}, s)
+    .textContent = "← lowers the score      ·      raises the score →";
+}
+
+/* ---------- wiring ---------- */
+function initInteractive() {
+  const picker = $("line-picker");
+  picker.innerHTML = MODEL.lines.map(l => {
+    const [bg, fg] = MTA[l] || ["#808183", "#fff"];
+    return `<button type="button" data-line="${l}" aria-pressed="${l === REF_LINE}"
+      title="${LINE_NAME[l] || l + " train"}"
+      style="background:${bg};color:${fg};font-size:${l.length > 1 ? 9 : 12}px">${l}</button>`;
+  }).join("");
+  picker.addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-line]");
+    if (!b) return;
+    P.line = b.dataset.line;
+    [...picker.children].forEach(c => c.setAttribute("aria-pressed", c === b));
+    // With the switch off, leave the sliders exactly where the user put them,
+    // so switching lines isolates the one-hot indicator.
+    if ($("opt-profile").checked) applyLineFeatures();
+    renderPredictor();
+  });
+
+  loadScenario(REF_SCEN);
+
+  $("btn-reset").addEventListener("click", () => {
+    P.line = REF_LINE;
+    [...picker.children].forEach(c =>
+      c.setAttribute("aria-pressed", c.dataset.line === REF_LINE));
+    loadScenario(REF_SCEN);
+    renderPredictor();
+  });
+  $("btn-worst").addEventListener("click", () => {
+    const worst = [...DATA.by_line].sort((a, b) => b.prevalence - a.prevalence)[0].line;
+    P.line = worst;
+    [...picker.children].forEach(c => c.setAttribute("aria-pressed", c.dataset.line === worst));
+    loadScenario(Object.assign({}, REF_SCEN, {
+      hour_of_day: 17, day_of_week: 3, calendar_month: 6,
+      line_positive_rate_prior_30d: 0.30, line_event_starts_prior_3h: 3,
+      system_event_line_starts_prior_3h: 45, hours_since_line_disruption: 1,
+      scheduled_revenue_stop_departures: 900
+    }));
+    $("f-dow").value = "3";
+    renderPredictor();
+  });
+  $("btn-best").addEventListener("click", () => {
+    const best = [...DATA.by_line].sort((a, b) => a.prevalence - b.prevalence)[0].line;
+    P.line = best;
+    [...picker.children].forEach(c => c.setAttribute("aria-pressed", c.dataset.line === best));
+    loadScenario(Object.assign({}, REF_SCEN, {
+      hour_of_day: 3, day_of_week: 0, calendar_month: 2,
+      line_positive_rate_prior_30d: 0.02, line_event_starts_prior_3h: 0,
+      system_event_line_starts_prior_3h: 2, hours_since_line_disruption: 70,
+      scheduled_revenue_stop_departures: 60
+    }));
+    $("f-dow").value = "0";
+    renderPredictor();
+  });
+
+  $("opt-profile").addEventListener("change", () => {
+    applyLineFeatures();
+    renderPredictor();
+  });
+
+  ["f-hour", "f-month", "f-dow", ...SLIDERS.map(s => s[0])]
+    .forEach(id => $(id).addEventListener("input", renderPredictor));
+
+  $("thr-slider").addEventListener("input", () => { renderThreshold(); renderPredictor(); });
 }
 
 /* ================= render ================= */
@@ -705,8 +1353,13 @@ function render() {
     fmt: v => v.toFixed(4),
     tip: it => `<b>${it.key}</b><div class="row"><span>Importance</span><span>${it.value.toFixed(4)}</span></div>`
   });
+
+  /* interactive sections re-render too, so they follow the theme */
+  renderThreshold();
+  renderPredictor();
 }
 
+initInteractive();
 render();
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
 mq.addEventListener("change", render);
