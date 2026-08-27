@@ -1,0 +1,1422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="An interactive research brief on next-hour MTA subway service-alert disruption ranking.">
+<link rel="icon" href="data:,">
+<title>MTA Subway Disruption Model — Research Brief</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #f2f2ef;
+    --surface:      #fcfcfb;
+    --ink:          #0b0b0b;
+    --ink-2:        #52514e;
+    --ink-3:        #898781;
+    --grid:         #e1e0d9;
+    --axis:         #c3c2b7;
+    --rule:         rgba(11,11,11,0.10);
+    --s1:           #2a78d6;
+    --s2:           #eb6834;
+    --s3:           #1baf7a;
+    --seq-1:        #cde2fb;
+    --seq-7:        #0d366b;
+    --warn:         #ec835a;
+    --crit:         #d03b3b;
+    --good:         #0ca30c;
+    --chip-ink:     #fff;
+    --sans: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: var(--body);
+    line-height: 1.55;
+    margin: 0;
+    padding: 0 0 5rem;
+    overflow-x: hidden;
+  }
+  .wrap { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; display: flex; flex-direction: column; gap: clamp(2.75rem, 7vw, 5.5rem); padding-top: clamp(2rem, 6vw, 4.5rem); }
+  .skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 50; transform: translateY(-160%); background: var(--ink); color: var(--surface); padding: .65rem .9rem; font-weight: 700; }
+  .skip-link:focus { transform: none; }
+  .section-nav { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--plane) 94%, transparent); backdrop-filter: blur(8px); }
+  .section-nav .nav-inner { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; min-height: 48px; display: flex; align-items: center; gap: 1.4rem; }
+  .nav-mark { font: 800 .72rem/1 var(--sans); letter-spacing: .08em; white-space: nowrap; }
+  .nav-links { display: flex; align-items: stretch; gap: 1.2rem; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { position: relative; display: flex; align-items: center; min-height: 48px; color: var(--ink-3); text-decoration: none; font: 700 .68rem/1 var(--sans); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+  .nav-links a:hover, .nav-links a[aria-current="true"] { color: var(--ink); }
+  .nav-links a[aria-current="true"]::after { content: ""; position: absolute; height: 3px; left: 0; right: 0; bottom: 0; background: var(--s1); }
+
+  .eyebrow {
+    font-family: var(--sans);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ink-3);
+    margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(2.35rem, 6vw, 4.7rem);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: .98;
+    text-wrap: balance;
+    margin: 0 0 0.75rem;
+  }
+  h2 {
+    font-family: var(--sans);
+    font-size: clamp(1.55rem, 3vw, 2.35rem);
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    margin: 0;
+  }
+  h3 { font-family: var(--sans); }
+  .lede { font-size: clamp(1.02rem, 2vw, 1.25rem); color: var(--ink-2); max-width: 67ch; margin: 0; }
+  .note { font-size: 0.88rem; color: var(--ink-3); max-width: 72ch; margin: 0; }
+  .section-head { display: grid; grid-template-columns: minmax(0, .72fr) minmax(280px, 1.28fr); gap: 1.5rem 3rem; align-items: end; padding-bottom: 1.1rem; border-bottom: 2px solid var(--ink); }
+  .section-head p { max-width: 66ch; justify-self: end; }
+  p { margin: 0; }
+
+  .hero { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr); gap: 2rem 4rem; align-items: start; }
+  .hero-copy { display: flex; flex-direction: column; gap: 1rem; }
+  .hero-aside { display: flex; flex-direction: column; gap: 1rem; }
+  .target-box { border-top: 3px solid var(--ink); border-bottom: 1px solid var(--rule); padding: 1rem 0 1.1rem; }
+  .target-box h2 { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; margin-bottom: .4rem; color: var(--ink-3); }
+  .target-box p { font-size: .92rem; color: var(--ink-2); }
+  .hero .meta {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem;
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--rule); grid-column: 1 / -1;
+    font-size: 0.8rem; color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero .meta b { color: var(--ink-2); font-weight: 600; }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule); border-block: 1px solid var(--rule); overflow: hidden; grid-column: 1 / -1; }
+  .tile { background: var(--surface); padding: 1.15rem 1.25rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .tile .k { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; }
+  .tile .v { font-family: var(--sans); font-size: clamp(1.65rem, 3vw, 2.35rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 0.8rem; color: var(--ink-2); }
+  .route-rail { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(170px, .28fr) minmax(0, 1fr); gap: 1rem 2rem; align-items: center; border-block: 1px solid var(--rule); padding: .9rem 0; }
+  .route-rail-copy { display: flex; flex-direction: column; gap: .2rem; }
+  .route-rail-copy strong { font: 800 .78rem/1.2 var(--sans); text-transform: uppercase; letter-spacing: .08em; }
+  .route-rail-copy span { color: var(--ink-3); font-size: .78rem; }
+  .route-index { display: flex; gap: .22rem; overflow-x: auto; padding: .25rem .2rem .45rem; scrollbar-width: thin; }
+  .route-index a { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 30px; display: grid; place-items: center; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--axis); color: #fff; font: 800 .7rem/1 var(--sans); text-decoration: none; transition: transform .12s ease, box-shadow .12s ease; }
+  .route-index a:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--ink); }
+  .route-index a[aria-current="true"] { box-shadow: 0 0 0 3px var(--ink); }
+
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 2px; padding: clamp(1.15rem, 2.5vw, 1.75rem); display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  .card > header { display: flex; flex-direction: column; gap: 0.35rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+  .stack { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; font-size: 0.82rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  .chartbox { position: relative; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tick { font-size: 11px; fill: var(--ink-3); font-family: var(--body); }
+  .axis-title { font-size: 11px; fill: var(--ink-3); font-family: var(--sans); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1; }
+
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0;
+    transition: opacity .12s; z-index: 5;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+    padding: 0.5rem 0.65rem; font-size: 0.8rem; min-width: 90px;
+    font-variant-numeric: tabular-nums; line-height: 1.4;
+  }
+  .tip b { font-family: var(--sans); display: block; margin-bottom: 0.15rem; }
+  .tip .row { display: flex; align-items: center; gap: 0.4rem; justify-content: space-between; }
+  .tip .row span:first-child { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink-2); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.87rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 700; }
+  tbody tr.best td { font-weight: 700; }
+  tbody tr.best td:first-child::after { content: "best"; font-family: var(--sans); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; background: var(--s1); color: #fff; padding: 0.1rem 0.35rem; border-radius: 2px; margin-left: 0.5rem; font-weight: 700; vertical-align: middle; }
+  .tbl-scroll { overflow-x: auto; max-width: 100%; }
+
+  details { font-size: 0.85rem; }
+  summary { cursor: pointer; color: var(--ink-3); font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; padding: 0.3rem 0; }
+  summary:hover { color: var(--ink-2); }
+  details[open] summary { margin-bottom: 0.6rem; }
+  :focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; border-radius: 2px; }
+
+  .bullet { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 0.7rem; flex: none; letter-spacing: 0; }
+
+  .callout { border-left: 3px solid var(--warn); padding: 0.15rem 0 0.15rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .callout.crit { border-left-color: var(--crit); }
+  .callout h3 { font-family: var(--sans); font-size: 0.95rem; margin: 0; font-weight: 700; }
+  .callout p { font-size: 0.9rem; color: var(--ink-2); max-width: 70ch; }
+
+  .limits { display: flex; flex-direction: column; gap: 1.15rem; }
+  footer { border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: 0.82rem; color: var(--ink-3); display: flex; flex-direction: column; gap: 0.4rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; background: var(--plane); padding: 0.1em 0.35em; border-radius: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+
+  /* ---------- key finding ---------- */
+  .finding-panel { background: var(--ink); color: var(--surface); padding: clamp(1.3rem, 4vw, 2.4rem); display: grid; grid-template-columns: minmax(240px, .68fr) minmax(0, 1.32fr); gap: 2rem 4rem; }
+  .finding-panel .eyebrow, .finding-panel .note { color: color-mix(in srgb, var(--surface) 70%, transparent); }
+  .finding-panel h2 { color: var(--surface); }
+  .finding-copy { display: flex; flex-direction: column; gap: 1rem; }
+  .finding-copy .claim { font: 700 clamp(1.1rem, 2vw, 1.4rem)/1.35 var(--sans); }
+  .dumbbells { display: flex; flex-direction: column; gap: 1.4rem; padding-top: .3rem; }
+  .dumbbell-label { display: flex; justify-content: space-between; gap: 1rem; font: 700 .78rem/1.3 var(--sans); margin-bottom: .6rem; }
+  .dumbbell-track { position: relative; height: 34px; margin-inline: 14px; }
+  .dumbbell-track::before { content: ""; position: absolute; left: 0; right: 0; top: 16px; height: 1px; background: color-mix(in srgb, var(--surface) 25%, transparent); }
+  .connector { position: absolute; top: 15px; height: 3px; left: var(--from); width: calc(var(--to) - var(--from)); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+  .dot { position: absolute; top: 4px; left: calc(var(--x) - 12px); width: 25px; height: 25px; border-radius: 50%; display: grid; place-items: center; font: 800 .7rem/1 var(--sans); border: 2px solid var(--surface); background: var(--route); color: var(--route-ink, #fff); }
+  .dot-value { position: absolute; top: 30px; transform: translateX(-50%); left: var(--x); font: 700 .72rem/1 var(--sans); font-variant-numeric: tabular-nums; }
+  .finding-scale { display: flex; justify-content: space-between; color: color-mix(in srgb, var(--surface) 60%, transparent); font-size: .68rem; margin: .7rem 14px 0; }
+
+  /* ---------- goals / findings ---------- */
+  .goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem 1.75rem; }
+  .goal h3 { font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; margin: 0 0 0.45rem; }
+  .goal p { font-size: 0.9rem; color: var(--ink-2); }
+  .goal ul { margin: 0; padding-left: 1.05rem; font-size: 0.9rem; color: var(--ink-2); display: flex; flex-direction: column; gap: 0.35rem; }
+  .goal li::marker { color: var(--ink-3); }
+  .goal strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- interactive controls ---------- */
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 0.9rem 1.4rem; }
+  .ctl { display: flex; flex-direction: column; gap: 0.3rem; }
+  .ctl label { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .ctl label b { font-family: var(--body); font-size: 0.85rem; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl .hint { font-size: 0.74rem; color: var(--ink-3); }
+
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; cursor: pointer; margin: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--grid); }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--grid); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--s1); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--rule); margin-top: -5.5px; }
+  input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: var(--s1); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--rule); }
+
+  select { font-family: var(--body); font-size: 0.87rem; color: var(--ink); background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; padding: 0.35rem 0.5rem; width: 100%; }
+
+  .switch { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.85rem; color: var(--ink-2); cursor: pointer; max-width: 62ch; }
+  .switch input { margin: 0.25rem 0 0; accent-color: var(--s1); flex: none; }
+
+  .btn { font-family: var(--sans); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ink-2); background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; padding: 0.4rem 0.7rem; cursor: pointer; }
+  .btn:hover { color: var(--ink); border-color: var(--axis); }
+
+  /* route bullet picker */
+  .picker { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .picker button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--axis); font-family: var(--sans); font-weight: 800; cursor: pointer; padding: 0; line-height: 1; opacity: 1; transition: transform .12s, box-shadow .12s; }
+  .picker button:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--ink); }
+  .picker button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--ink); }
+
+  /* readout */
+  .readout { display: grid; grid-template-columns: minmax(190px, 0.85fr) 1.15fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 620px) { .readout { grid-template-columns: 1fr; } }
+  .score { display: flex; flex-direction: column; gap: 0.3rem; padding: 1rem 1.1rem; background: var(--plane); border: 1px solid var(--rule); border-radius: 3px; }
+  .score .k { font-family: var(--sans); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 700; }
+  .score .v { font-family: var(--sans); font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .score .s { font-size: 0.8rem; color: var(--ink-2); }
+  .verdict { font-family: var(--sans); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 2px; align-self: flex-start; color: var(--chip-ink); }
+  .verdict.flag { background: var(--crit); }
+  .verdict.clear { background: var(--good); }
+
+  /* confusion matrix */
+  .cm { display: grid; grid-template-columns: auto 1fr 1fr; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; font-variant-numeric: tabular-nums; }
+  .cm > div { background: var(--surface); padding: 0.6rem 0.7rem; }
+  .cm .hd { font-family: var(--sans); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 700; display: flex; align-items: center; }
+  .cm .cell { display: flex; flex-direction: column; gap: 0.1rem; }
+  .cm .cell .n { font-family: var(--sans); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+  .cm .cell .l { font-size: 0.72rem; color: var(--ink-3); }
+  .cm .cell.hit .n { color: var(--good); }
+  .cm .cell.miss .n { color: var(--crit); }
+
+  .statrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .statrow > div { background: var(--surface); padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .statrow .k { font-family: var(--sans); font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); font-weight: 700; }
+  .statrow .v { font-family: var(--sans); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+  .threshold-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 1rem; align-items: end; }
+  .threshold-value { font: 800 clamp(2.4rem, 7vw, 4.4rem)/.9 var(--sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .operating { color: var(--ink-2); font-size: .9rem; }
+  .slider-wrap { position: relative; padding-top: .6rem; }
+  .published-mark { position: absolute; left: 58.333%; top: 0; transform: translateX(-50%); font: 700 .6rem/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+  .published-mark::after { content: ""; display: block; width: 1px; height: 12px; margin: 3px auto 0; background: var(--ink-3); }
+  .explorer-layout { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: 1.25rem; align-items: start; }
+  .predictor-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 1.25rem; align-items: start; }
+  .step-label { font: 700 .68rem/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .evidence-list { display: flex; flex-direction: column; gap: 1rem; }
+  .evidence-list > details { background: var(--surface); border: 1px solid var(--rule); padding: 0 clamp(1rem, 2.5vw, 1.5rem); }
+  .evidence-list > details > summary { color: var(--ink); font-size: .8rem; padding: 1rem 0; }
+  .evidence-list > details[open] { padding-bottom: 1.25rem; }
+
+  @media (max-width: 820px) {
+    .hero, .finding-panel, .section-head, .explorer-layout, .predictor-layout { grid-template-columns: 1fr; }
+    .route-rail { grid-template-columns: 1fr; }
+    .section-head p { justify-self: start; }
+    .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .nav-mark { display: none; }
+    .section-nav .nav-inner { width: 100%; padding-inline: 1rem; }
+  }
+  @media (max-width: 520px) {
+    .wrap { width: min(100% - 1.25rem, 1180px); }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .tile { padding: .9rem .75rem; }
+    .tile .s { font-size: .72rem; }
+    .card { padding-inline: .85rem; }
+    .controls { grid-template-columns: 1fr; }
+    .cm > div { padding: .5rem .35rem; }
+    .cm .hd { font-size: .54rem; letter-spacing: .04em; }
+    .cm .cell .n { font-size: .9rem; }
+    .statrow { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .finding-panel { margin-inline: -.625rem; }
+    .dumbbell-label { font-size: .7rem; }
+    h1 { font-size: clamp(2.2rem, 12vw, 3.2rem); }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<nav class="section-nav" aria-label="Research brief sections">
+  <div class="nav-inner">
+    <span class="nav-mark">MTA / MODEL REVIEW</span>
+    <div class="nav-links">
+      <a href="#overview">Overview</a><a href="#key-finding">Key finding</a>
+      <a href="#thresholds">Explore thresholds</a><a href="#predictor">Try the model</a>
+      <a href="#evidence">Evidence &amp; limitations</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap" id="main">
+
+  <section class="hero" id="overview" aria-labelledby="overview-title">
+    <div class="hero-copy">
+    <p class="eyebrow">NYC transit operations research brief · retrospective model review</p>
+    <h1 id="overview-title">Recent line history helps rank disruption risk—but not reliably enough to alert riders.</h1>
+    <p class="lede">
+      A gradient-boosted model ranks line-hours by whether a new qualifying MTA
+      service-alert disruption will begin in the next 60 minutes. The ranking
+      signal is real, modest, and mostly a reflection of recent line history.
+    </p>
+    <div class="target-box">
+      <h2>Exact prediction target</h2>
+      <p>For one subway line at the start of an hour, did the MTA first publish a new,
+        unplanned delay or suspension alert during that hour? This measures alert
+        publication—not individual train lateness.</p>
+    </div>
+    </div>
+    <aside class="hero-aside" aria-label="Responsible use warning">
+    <div class="callout crit">
+      <h3>This is a prioritization tool, not an alerting system</h3>
+      <p>
+        At the published threshold, roughly three in four flags are false alarms.
+        Use the model to prioritize review—not to send rider alerts or trigger
+        unattended action.
+      </p>
+    </div>
+    <p class="note">Scores order cases; they are not probabilities. One-off incidents
+      such as medical emergencies, mechanical failures, and police activity remain
+      difficult to anticipate from historical patterns alone.</p>
+    </aside>
+    <div class="tiles" aria-label="Published held-out test metrics">
+      <div class="tile"><span class="k">Precision</span><span class="v">23.8%</span><span class="s">about 24 true events per 100 flags</span></div>
+      <div class="tile"><span class="k">Recall</span><span class="v">62.8%</span><span class="s">of qualifying disruptions found</span></div>
+      <div class="tile"><span class="k">Lift</span><span class="v">1.65×</span><span class="s">over the 14.4% test base rate</span></div>
+      <div class="tile"><span class="k">PR-AUC</span><span class="v">0.2566</span><span class="s">secondary ranking metric</span></div>
+    </div>
+    <div class="route-rail">
+      <div class="route-rail-copy">
+        <strong>25 subway lines in the model</strong>
+        <span>Choose a route to load its live scenario.</span>
+      </div>
+      <div class="route-index" id="route-index" aria-label="Choose a subway line to try in the model"></div>
+    </div>
+    <div class="meta">
+      <span>Snapshot <b>__SNAP_START__ → __SNAP_END__</b></span>
+      <span>Model-eligible line-hours <b>__ROWS__</b></span>
+      <span>Split <b>chronological 70% train / 15% validation / 15% test</b></span>
+      <span>Target <b>significant_disruption_next_hour</b></span>
+    </div>
+  </section>
+
+  <section id="key-finding" aria-labelledby="finding-title">
+    <div class="finding-panel">
+      <div class="finding-copy">
+        <p class="eyebrow">Key finding · structure versus recent conditions</p>
+        <h2 id="finding-title">The model mainly learned which lines have been experiencing disruptions lately.</h2>
+        <p class="claim">Line identity contributes some separation, but recent line history contributes roughly twice as much.</p>
+        <p class="note">These four scores are recomputed through the embedded 300-tree model—not duplicated as a second calculation.</p>
+      </div>
+      <div>
+        <div class="dumbbells" id="key-visual" role="img" aria-label="Model score comparison for the A train and 42nd Street Shuttle with real and frozen history"></div>
+        <div class="finding-scale"><span>0.00 model score</span><span>0.70</span></div>
+        <p class="note" style="margin-top:1.25rem">The checked-in bundle returns 0.011 for the shuttle's real-history case at three decimals; the project notes record 0.012. The visualization reports the live bundle result to preserve model fidelity.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="thresholds" class="stack" aria-labelledby="thresholds-title">
+    <header class="section-head">
+      <div><p class="eyebrow">Explore thresholds</p><h2 id="thresholds-title">Every alerting rule trades false alarms for missed disruptions.</h2></div>
+      <p class="note">There is no objectively correct threshold. This explorer recomputes exact held-out counts from exported score histograms; choose based on the cost of each error.</p>
+    </header>
+  <div class="card">
+    <header>
+      <div class="threshold-head">
+        <div><span class="step-label">Decision threshold</span><div class="threshold-value" id="thr-val">0.58</div><p class="operating" id="thr-operating">Published operating point</p></div>
+        <button class="btn" id="btn-thr-reset" type="button">Reset to published 0.58</button>
+      </div>
+    </header>
+
+    <div class="ctl slider-wrap">
+      <label for="thr-slider">Change threshold <b>Lower favors recall · higher favors precision</b></label>
+      <span class="published-mark" aria-hidden="true">Published .58</span>
+      <input type="range" id="thr-slider" min="0.02" max="0.98" step="0.01" value="0.58" aria-describedby="thr-hint thr-plain">
+      <span class="hint" id="thr-hint"></span>
+    </div>
+
+    <div class="explorer-layout">
+      <div class="cm" id="cm">
+        <div class="hd"></div>
+        <div class="hd">Disruption occurred</div>
+        <div class="hd">No disruption</div>
+        <div class="hd">Model flagged</div>
+        <div class="cell hit"><span class="n" id="cm-tp">—</span><span class="l">true positive</span></div>
+        <div class="cell miss"><span class="n" id="cm-fp">—</span><span class="l">false alarm</span></div>
+        <div class="hd">Model stayed quiet</div>
+        <div class="cell miss"><span class="n" id="cm-fn">—</span><span class="l">missed disruption</span></div>
+        <div class="cell hit"><span class="n" id="cm-tn">—</span><span class="l">true negative</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.9rem">
+        <div class="statrow" aria-live="polite">
+          <div><span class="k">Precision</span><span class="v" id="s-prec">—</span></div>
+          <div><span class="k">Recall</span><span class="v" id="s-rec">—</span></div>
+          <div><span class="k">F1</span><span class="v" id="s-f1">—</span></div>
+          <div><span class="k">Lift</span><span class="v" id="s-lift">—</span></div>
+          <div><span class="k">Flagged hours</span><span class="v" id="s-flagged">—</span></div>
+        </div>
+        <output class="note" id="thr-plain" for="thr-slider"></output>
+      </div>
+    </div>
+
+    <div class="legend" id="l-thr"></div>
+    <div class="chartbox"><div id="c-thr"></div><div class="tip" id="t-thr"></div></div>
+    <p class="note">
+      The vertical rule marks your current threshold. <b>0.58</b> is the
+      F1-optimal point chosen on validation and reported in the tables above —
+      note that F1 is itself an arbitrary tiebreaker, weighting a missed
+      disruption exactly as costly as a false alarm.
+    </p>
+  </div>
+  </section>
+
+  <section id="predictor" class="stack" aria-labelledby="predictor-title">
+    <header class="section-head">
+      <div><p class="eyebrow">Try the model</p><h2 id="predictor-title">Score an invented line-hour with the real fitted model.</h2></div>
+      <p class="note">The browser traverses all 300 exported trees in feature order. The result is a model score for ranking—not a probability or a claim about train lateness.</p>
+    </header>
+  <div class="predictor-layout">
+  <div class="card">
+    <span class="step-label">1 · Scenario inputs</span>
+
+    <div class="ctl">
+      <label>Line</label>
+      <div class="picker" id="line-picker" role="group" aria-label="Subway line"></div>
+    </div>
+
+    <label class="switch">
+      <input type="checkbox" id="opt-profile" checked>
+      <span>
+        <b>Apply each line's typical history profile.</b> When enabled, selecting a line also loads that line's historical conditions. When disabled, line selection changes only the one-hot identity and freezes the current history sliders.
+      </span>
+    </label>
+
+    <div class="controls">
+      <div class="ctl">
+        <label for="f-hour">Hour of day <b id="v-hour">8 AM</b></label>
+        <input type="range" id="f-hour" min="0" max="23" step="1" value="8">
+      </div>
+      <div class="ctl">
+        <label for="f-dow">Day of week</label>
+        <select id="f-dow">
+          <option value="1">Monday</option><option value="2">Tuesday</option>
+          <option value="3" selected>Wednesday</option><option value="4">Thursday</option>
+          <option value="5">Friday</option><option value="6">Saturday</option>
+          <option value="0">Sunday</option>
+        </select>
+      </div>
+      <div class="ctl">
+        <label for="f-month">Month <b id="v-month">June</b></label>
+        <input type="range" id="f-month" min="1" max="12" step="1" value="6">
+      </div>
+      <div class="ctl">
+        <label for="f-rate30">Line's trailing 30-day rate <b id="v-rate30">—</b></label>
+        <input type="range" id="f-rate30" min="0" max="0.45" step="0.005" value="0.1">
+        <span class="hint">Share of this line's last 30 days of hours that were disrupted.</span>
+      </div>
+      <div class="ctl">
+        <label for="f-line3h">Incidents on this line, last 3h <b id="v-line3h">—</b></label>
+        <input type="range" id="f-line3h" min="0" max="8" step="1" value="0">
+      </div>
+      <div class="ctl">
+        <label for="f-sys3h">System-wide incidents, last 3h <b id="v-sys3h">—</b></label>
+        <input type="range" id="f-sys3h" min="0" max="60" step="1" value="10">
+      </div>
+      <div class="ctl">
+        <label for="f-since">Hours since last disruption <b id="v-since">—</b></label>
+        <input type="range" id="f-since" min="0" max="72" step="1" value="12">
+      </div>
+      <div class="ctl">
+        <label for="f-sched">Scheduled departures this hour <b id="v-sched">—</b></label>
+        <input type="range" id="f-sched" min="0" max="1200" step="10" value="400">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      <button class="btn" id="btn-reset">Reset to a typical hour</button>
+      <button class="btn" id="btn-worst">Busy weekday peak</button>
+      <button class="btn" id="btn-best">Quiet overnight</button>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="card">
+    <span class="step-label">2 · Score versus threshold</span>
+    <div class="readout" aria-live="polite">
+      <div class="score">
+        <span class="k">Model score</span>
+        <span class="v" id="p-score">—</span>
+        <span class="verdict" id="p-verdict">—</span>
+        <span class="s" id="p-pctile"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.9rem">
+        <div class="statrow">
+          <div><span class="k">Current threshold</span><span class="v" id="p-threshold">0.58</span></div>
+          <div><span class="k">Historical rate at this score</span><span class="v" id="p-cal">—</span></div>
+          <div><span class="k">Test base rate</span><span class="v" id="p-base">14.4%</span></div>
+        </div>
+        <p class="note">
+          <b>Why the numbers differ:</b> class weighting makes the raw score useful
+          for ranking but not calibrated. The observed frequency comes from the
+          relevant held-out calibration bin and is the appropriate historical context.
+        </p>
+      </div>
+    </div>
+    </div>
+    <div class="card">
+    <span class="step-label">3 · Interpretation and sensitivity</span>
+    <div class="legend" id="l-attr"></div>
+    <div class="chartbox"><div id="c-attr"></div><div class="tip" id="t-attr"></div></div>
+    <p class="note">
+      Attribution is <em>leave-one-group-out</em>: each bar is how much the log-odds
+      move when that group of inputs is reset to the reference hour while
+      everything else stays as you set it. Groups interact, so the bars do not sum
+      to the total — this is an honest sensitivity readout, not a SHAP
+      decomposition.
+    </p>
+    </div>
+  </div>
+  </div>
+  </section>
+
+  <section id="evidence" class="stack" aria-labelledby="evidence-title">
+    <header class="section-head">
+      <div><p class="eyebrow">Evidence and limitations</p><h2 id="evidence-title">The full evaluation, with technical detail on demand.</h2></div>
+      <p class="note">Open each section for charts, accessible data tables, and the caveats that constrain responsible use.</p>
+    </header>
+    <div class="evidence-list">
+    <details open><summary>Model comparison and precision–recall evidence</summary>
+      <div class="stack">
+      <div class="card"><header><h3>Model comparison</h3><p class="note">Evaluated once on the held-out test set. Each threshold was tuned separately on validation.</p></header><div class="chartbox"><div id="c-models"></div><div class="tip" id="t-models"></div></div><div class="tbl-scroll"><table><thead><tr><th>Model</th><th>PR-AUC</th><th>ROC-AUC</th><th>Precision</th><th>Recall</th><th>Threshold</th></tr></thead><tbody id="tbody-models"></tbody></table></div></div>
+      <div class="grid-2">
+        <div class="card"><header><h3>Precision–recall curves</h3><p class="note">Every operating point; the dashed rule is the 14.4% test base rate.</p></header><div class="legend" id="l-pr"></div><div class="chartbox"><div id="c-pr"></div><div class="tip" id="t-pr"></div></div><details><summary>Curve data table</summary><div class="tbl-scroll"><table><thead><tr><th>Recall</th><th>Baseline</th><th>Logistic</th><th>Gradient boosting</th></tr></thead><tbody id="tbody-pr"></tbody></table></div></details></div>
+        <div class="card"><header><h3>Calibration context</h3><p class="note">Model score against observed frequency. The diagonal shows equality, not a claimed probability.</p></header><div class="legend" id="l-cal"></div><div class="chartbox"><div id="c-cal"></div><div class="tip" id="t-cal"></div></div><div class="callout crit"><h3>Scores are not calibrated probabilities</h3><p>Hours scored near 0.76 saw disruption about 31% of the time. Ranking is useful; probability claims require a separate calibration step.</p></div></div>
+      </div></div>
+    </details>
+    <details><summary>Feature importance and disruption patterns</summary>
+      <div class="stack">
+      <div class="card"><header><h3>Feature importance</h3><p class="note">Drop in average precision when a feature is shuffled on a 20,000-row test sample.</p></header><div class="chartbox"><div id="c-imp"></div><div class="tip" id="t-imp"></div></div></div>
+      <div class="card"><header><h3>Disruption prevalence by line</h3><p class="note">Share of eligible line-hours followed by a qualifying alert. Route bullets identify lines; magnitude is also labeled in the table.</p></header><div class="chartbox"><div id="c-lines"></div><div class="tip" id="t-lines"></div></div><details><summary>Line prevalence data</summary><div class="tbl-scroll"><table><thead><tr><th>Line</th><th>Eligible hours</th><th>Disrupted hours</th><th>Rate</th></tr></thead><tbody id="tbody-lines"></tbody></table></div></details></div>
+      <div class="grid-2"><div class="card"><header><h3>Hour-of-day pattern</h3><p class="note">Observed disruption frequency by hour, weekday versus weekend.</p></header><div class="legend" id="l-hour"></div><div class="chartbox"><div id="c-hour"></div><div class="tip" id="t-hour"></div></div></div><div class="card"><header><h3>Monthly drift</h3><p class="note">The shaded band is the held-out test period; training occurred in a calmer era.</p></header><div class="chartbox"><div id="c-month"></div><div class="tip" id="t-month"></div></div></div></div>
+      </div>
+    </details>
+    <details open><summary>Methodology and responsible-use limitations</summary>
+    <div class="card limits">
+
+    <div class="callout">
+      <h3>The model mostly learned structure, not conditions</h3>
+      <p>
+        The two dominant features are the line's own trailing 30-day rate and the
+        hour of day. It has learned that the A is chronically disrupted and that
+        disruption clusters at certain hours — durable facts you could write on an
+        index card. Features describing evolving conditions contribute far less,
+        which is why gradient boosting beats logistic regression by only 0.006
+        PR-AUC.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>The base rate nearly doubled across the snapshot</h3>
+      <p>
+        Monthly rates run about 7.7% in early 2021 against 15.4% by April 2026.
+        The chronological split is the correct choice for forecasting, but it means
+        training happens on a quieter period than testing. The tuned threshold
+        transfers here only because validation (14.2%) and test (14.4%) happen to
+        be close; that will not hold for a future period without retuning.
+      </p>
+    </div>
+
+    <div class="callout crit">
+      <h3>The label is a proxy for alerts, not for lateness</h3>
+      <p>
+        A positive means the MTA published a qualifying unplanned alert for that
+        line in that hour — not that any specific train ran late. Changes in the
+        agency's alerting practice move this target independently of actual service,
+        and are a plausible contributor to the drift above.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>This is retrospective only</h3>
+      <p>
+        Every number here comes from a static historical snapshot. There is no live
+        ingest, no incremental feature computation, and no serving path — so nothing
+        on this page is a live prediction, and at 23.8% precision a
+        customer-facing "delays expected" alert would be wrong roughly three times
+        out of four.
+      </p>
+    </div>
+    <details><summary>Methodology details</summary><div class="goals"><div class="goal"><h3>Reproducible data</h3><p>Immutable, hash-manifested alert snapshot with auditable SQL layers and scheduled-service eligibility.</p></div><div class="goal"><h3>Leakage-safe features</h3><p>Every input is computed strictly before prediction hour <code>t</code>.</p></div><div class="goal"><h3>Chronological evaluation</h3><p>70% train, 15% validation, 15% held-out test; threshold tuned only on validation.</p></div><div class="goal"><h3>Exact static inference</h3><p>All 300 trees are embedded and traversed locally; export refuses disagreement with scikit-learn above 1e-5.</p></div></div></details>
+    </div></details>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Source: MTA Service Alerts (Beginning April 2020), NY Open Data
+      <code>7kct-peq7</code>. Alert snapshot through 2026-06-29; model-eligible
+      hours end 2026-04-27, bounded by official schedule coverage.
+    </p>
+    <p>
+      Reproduce with <code>mta-alerts build --replace</code> then
+      <code>python train_classifier.py</code>. Full write-up in
+      <code>docs/model_results.md</code>. Not affiliated with the MTA.
+    </p>
+  </footer>
+</main>
+
+<script>
+const DATA = __DATA__;
+const MODEL = __MODEL__;
+
+const MTA = {
+  "1":["#EE352E","#fff"],"2":["#EE352E","#fff"],"3":["#EE352E","#fff"],
+  "4":["#00933C","#fff"],"5":["#00933C","#fff"],"6":["#00933C","#fff"],
+  "7":["#B933AD","#fff"],
+  "A":["#0039A6","#fff"],"C":["#0039A6","#fff"],"E":["#0039A6","#fff"],
+  "B":["#FF6319","#fff"],"D":["#FF6319","#fff"],"F":["#FF6319","#fff"],"M":["#FF6319","#fff"],
+  "G":["#6CBE45","#fff"],
+  "J":["#996633","#fff"],"Z":["#996633","#fff"],
+  "L":["#A7A9AC","#000"],
+  "N":["#FCCC0A","#000"],"Q":["#FCCC0A","#000"],"R":["#FCCC0A","#000"],"W":["#FCCC0A","#000"],
+  "H":["#808183","#fff"],"FS":["#808183","#fff"],"GS":["#808183","#fff"]
+};
+const LINE_NAME = {"H":"Rockaway Pk Shuttle","FS":"Franklin Av Shuttle","GS":"42 St Shuttle"};
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = v => (v * 100).toFixed(1) + "%";
+const pct0 = v => Math.round(v * 100) + "%";
+const NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function svgRoot(host, w, h) {
+  host.innerHTML = "";
+  const s = el("svg", {viewBox: `0 0 ${w} ${h}`, role: "img"}, host);
+  return s;
+}
+function mixHex(a, b, t) {
+  const p = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+  const [r1,g1,b1] = p(a), [r2,g2,b2] = p(b);
+  const c = (x,y) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
+  return `#${c(r1,r2)}${c(g1,g2)}${c(b1,b2)}`;
+}
+
+function tipFor(hostId, tipId) {
+  const host = document.getElementById(hostId).parentElement;
+  const tip = document.getElementById(tipId);
+  return {
+    show(html, ev) {
+      tip.innerHTML = html;
+      tip.style.opacity = 1;
+      const r = host.getBoundingClientRect();
+      let x = ev.clientX - r.left + 12;
+      let y = ev.clientY - r.top - 10;
+      if (x + tip.offsetWidth > r.width) x = ev.clientX - r.left - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, x) + "px";
+      tip.style.top = Math.max(0, y) + "px";
+    },
+    hide() { tip.style.opacity = 0; }
+  };
+}
+function legend(hostId, items) {
+  document.getElementById(hostId).innerHTML = items.map(i =>
+    `<span><i class="swatch" style="background:${i.color}"></i>${i.name}</span>`).join("");
+}
+
+/* ---------- line / curve chart ---------- */
+function lineChart(hostId, tipId, series, o) {
+  const host = document.getElementById(hostId);
+  const W = 640, H = o.height || 300;
+  const m = {t: 14, r: 16, b: 38, l: 46};
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const [x0, x1] = o.xDomain, [y0, y1] = o.yDomain;
+  const sx = v => m.l + (v - x0) / (x1 - x0) * iw;
+  const sy = v => m.t + ih - (v - y0) / (y1 - y0) * ih;
+
+  (o.yTicks || []).forEach(t => {
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(t), y2: sy(t), class: "gridline"}, s);
+    el("text", {x: m.l - 8, y: sy(t) + 4, class: "tick", "text-anchor": "end"}, s)
+      .textContent = o.yFmt ? o.yFmt(t) : t;
+  });
+  (o.xTicks || []).forEach(t => {
+    el("text", {x: sx(t.v !== undefined ? t.v : t), y: H - m.b + 17, class: "tick", "text-anchor": "middle"}, s)
+      .textContent = t.label !== undefined ? t.label : (o.xFmt ? o.xFmt(t) : t);
+  });
+  el("line", {x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, class: "baseline"}, s);
+
+  if (o.bands) o.bands.forEach(b => {
+    el("rect", {x: sx(b.from), y: m.t, width: sx(b.to) - sx(b.from), height: ih,
+      fill: css("--s1"), opacity: 0.07}, s);
+    el("text", {x: (sx(b.from) + sx(b.to)) / 2, y: m.t + 12, class: "tick", "text-anchor": "middle"}, s)
+      .textContent = b.label;
+  });
+  if (o.refLine !== undefined)
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(o.refLine), y2: sy(o.refLine),
+      stroke: css("--ink-3"), "stroke-width": 1.5, "stroke-dasharray": "5 4"}, s);
+  if (o.diagonal)
+    el("line", {x1: sx(x0), y1: sy(y0), x2: sx(Math.min(x1, y1)), y2: sy(Math.min(x1, y1)),
+      stroke: css("--ink-3"), "stroke-width": 1.5, "stroke-dasharray": "5 4"}, s);
+  if (o.vRule !== undefined) {
+    el("line", {x1: sx(o.vRule), x2: sx(o.vRule), y1: m.t, y2: m.t + ih,
+      stroke: css("--ink"), "stroke-width": 1.5}, s);
+    el("text", {x: sx(o.vRule), y: m.t - 3, class: "axis-title", "text-anchor": "middle",
+      fill: css("--ink")}, s).textContent = o.vLabel || "";
+  }
+
+  el("text", {x: m.l, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
+  el("text", {x: 0, y: 0, class: "axis-title",
+    transform: `translate(11 ${m.t + ih}) rotate(-90)`}, s).textContent = o.yTitle;
+
+  series.forEach(ser => {
+    const d = ser.points.map((p, i) => `${i ? "L" : "M"}${sx(p[0]).toFixed(1)} ${sy(p[1]).toFixed(1)}`).join(" ");
+    el("path", {d, fill: "none", stroke: ser.color, "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round"}, s);
+    if (ser.dots) ser.points.forEach(p => {
+      el("circle", {cx: sx(p[0]), cy: sy(p[1]), r: 4.5, fill: ser.color,
+        stroke: css("--surface"), "stroke-width": 2}, s);
+    });
+  });
+
+  const tip = tipFor(hostId, tipId);
+  const rule = el("line", {y1: m.t, y2: m.t + ih, stroke: css("--axis"), "stroke-width": 1, opacity: 0}, s);
+  const hit = el("rect", {x: m.l, y: m.t, width: iw, height: ih, fill: "transparent"}, s);
+  hit.style.cursor = "crosshair";
+  hit.addEventListener("mousemove", ev => {
+    const pt = s.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const loc = pt.matrixTransform(s.getScreenCTM().inverse());
+    const xv = x0 + (loc.x - m.l) / iw * (x1 - x0);
+    let rows = "", gx = null;
+    series.forEach(ser => {
+      let best = ser.points[0], bd = Infinity;
+      ser.points.forEach(p => { const d = Math.abs(p[0] - xv); if (d < bd) { bd = d; best = p; } });
+      if (gx === null) gx = best[0];
+      rows += `<div class="row"><span><i class="swatch" style="background:${ser.color}"></i>${ser.name}</span><span>${o.tipFmt(best[1])}</span></div>`;
+    });
+    rule.setAttribute("x1", sx(gx)); rule.setAttribute("x2", sx(gx));
+    rule.setAttribute("opacity", 1);
+    tip.show(`<b>${o.tipLabel(gx)}</b>${rows}`, ev);
+  });
+  hit.addEventListener("mouseleave", () => { tip.hide(); rule.setAttribute("opacity", 0); });
+}
+
+/* ---------- vertical bars ---------- */
+function barChart(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const W = 1000, H = o.height || 260;
+  const m = {t: 12, r: 8, b: o.bottom || 46, l: 46};
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = o.max, step = iw / items.length, bw = Math.min(step - 6, 42);
+  const sy = v => m.t + ih - v / max * ih;
+
+  (o.yTicks || []).forEach(t => {
+    el("line", {x1: m.l, x2: m.l + iw, y1: sy(t), y2: sy(t), class: "gridline"}, s);
+    el("text", {x: m.l - 8, y: sy(t) + 4, class: "tick", "text-anchor": "end"}, s).textContent = pct0(t);
+  });
+
+  const tip = tipFor(hostId, tipId);
+  items.forEach((it, i) => {
+    const x = m.l + i * step + (step - bw) / 2;
+    const h = Math.max(1.5, ih - (sy(it.value) - m.t));
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x, y: sy(it.value), width: bw, height: h, rx: 3, fill: it.color}, g);
+    el("rect", {x: x - 2, y: m.t, width: bw + 4, height: ih, fill: "transparent"}, g);
+    g.addEventListener("mousemove", ev => tip.show(o.tip(it), ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+
+    if (o.bullets) {
+      const [bg, fg] = MTA[it.key] || ["#808183", "#fff"];
+      el("circle", {cx: x + bw / 2, cy: H - m.b + 15, r: 10, fill: bg}, s);
+      el("text", {x: x + bw / 2, y: H - m.b + 19, "text-anchor": "middle",
+        "font-size": it.key.length > 1 ? 8 : 11, "font-weight": 700,
+        fill: fg, "font-family": "Helvetica Neue, Arial, sans-serif"}, s).textContent = it.key;
+    } else {
+      el("text", {x: x + bw / 2, y: H - m.b + 16, class: "tick", "text-anchor": "middle"}, s)
+        .textContent = it.key;
+    }
+  });
+  el("line", {x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, class: "baseline"}, s);
+  el("text", {x: 0, y: 0, class: "axis-title", transform: `translate(11 ${m.t + ih}) rotate(-90)`}, s)
+    .textContent = o.yTitle;
+}
+
+/* ---------- horizontal bars ---------- */
+function hbarChart(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const rowH = 30, W = 820, labelW = o.labelW || 250;
+  const H = items.length * rowH + 30;
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - labelW - 90;
+  const max = Math.max(...items.map(i => i.value)) * 1.02;
+  const tip = tipFor(hostId, tipId);
+
+  items.forEach((it, i) => {
+    const y = i * rowH + 8;
+    el("text", {x: labelW - 12, y: y + 15, class: "tick", "text-anchor": "end"}, s)
+      .textContent = it.key;
+    const w = Math.max(2, it.value / max * iw);
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x: labelW, y: y + 3, width: w, height: rowH - 12, rx: 3, fill: it.color}, g);
+    el("rect", {x: labelW, y, width: iw, height: rowH, fill: "transparent"}, g);
+    el("text", {x: labelW + w + 8, y: y + 15, class: "tick", fill: css("--ink-2")}, g)
+      .textContent = o.fmt(it.value);
+    g.addEventListener("mousemove", ev => tip.show(o.tip(it), ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+  });
+  el("line", {x1: labelW, x2: labelW, y1: 4, y2: H - 18, class: "baseline"}, s);
+  el("text", {x: labelW, y: H - 4, class: "axis-title"}, s).textContent = o.xTitle;
+}
+
+/* ================= live model inference =================
+   The 300 boosted trees are embedded in MODEL.trees. Each node is
+   [feature_idx, threshold, left, right, missing_go_to_left]; a leaf is
+   [-1, value, 0, 0, 0]. This mirrors sklearn's traversal exactly and is
+   verified against it at export time (see export_model_bundle.py).        */
+
+const FIDX = {};
+MODEL.feature_columns.forEach((name, i) => { FIDX[name] = i; });
+
+function rawScore(vec) {
+  let total = MODEL.baseline_prediction;
+  const trees = MODEL.trees;
+  for (let t = 0; t < trees.length; t++) {
+    const tree = trees[t];
+    let i = 0;
+    for (;;) {
+      const n = tree[i];
+      if (n[0] === -1) { total += n[1]; break; }
+      const v = vec[n[0]];
+      if (v !== v) i = n[4] ? n[2] : n[3];        // NaN routes as sklearn does
+      else i = v <= n[1] ? n[2] : n[3];
+    }
+  }
+  return total;
+}
+const sigmoid = z => 1 / (1 + Math.exp(-z));
+
+/* Turn a {featureName: value} scenario into the dense vector the trees index. */
+function vectorize(scen) {
+  const vec = new Float64Array(MODEL.feature_columns.length);
+  for (const k in scen) { const i = FIDX[k]; if (i !== undefined) vec[i] = scen[k]; }
+  return vec;
+}
+const scoreOf = scen => sigmoid(rawScore(vectorize(scen)));
+
+/* Reference line: median prevalence, so "typical" is not an extreme. */
+const REF_LINE = (() => {
+  const s = [...DATA.by_line].sort((a, b) => a.prevalence - b.prevalence);
+  return s[Math.floor(s.length / 2)].line;
+})();
+
+/* A scenario is the exported reference hour, overlaid with one line's typical
+   history and that line's one-hot indicator. */
+function baseScenario(line, applyProfile) {
+  const scen = Object.assign({}, MODEL.reference);
+  MODEL.lines.forEach(l => { scen["line_" + l] = 0; });
+  if (FIDX["line_" + line] !== undefined) scen["line_" + line] = 1;
+  if (applyProfile !== false && MODEL.line_profile[line])
+    Object.assign(scen, MODEL.line_profile[line]);
+  return scen;
+}
+const REF_SCEN = baseScenario(REF_LINE, true);
+
+function renderKeyFinding() {
+  const coherent = (line, profile) => {
+    const scen = baseScenario(line, profile);
+    scen.line_positive_rate_prior_7d = scen.line_positive_rate_prior_30d;
+    scen.line_event_starts_prior_1h = Math.min(scen.line_event_starts_prior_3h, 2);
+    scen.line_event_starts_prior_6h = scen.line_event_starts_prior_3h * 1.6;
+    scen.system_event_line_starts_prior_1h = scen.system_event_line_starts_prior_3h / 3;
+    scen.system_event_line_starts_prior_6h = scen.system_event_line_starts_prior_3h * 1.7;
+    return scen;
+  };
+  const scenarios = [
+    {label: "Real line histories", a: scoreOf(coherent("A", true)), shuttle: scoreOf(coherent("GS", true))},
+    {label: "History frozen at the generic reference", a: scoreOf(coherent("A", false)), shuttle: scoreOf(coherent("GS", false))}
+  ];
+  const max = 0.70;
+  const pos = v => Math.min(100, Math.max(0, v / max * 100)).toFixed(2) + "%";
+  document.getElementById("key-visual").innerHTML = scenarios.map(row => {
+    const from = Math.min(row.a, row.shuttle), to = Math.max(row.a, row.shuttle);
+    return `<div class="dumbbell-row">
+      <div class="dumbbell-label"><span>${row.label}</span><span>A ${row.a.toFixed(3)} · 42 St Shuttle ${row.shuttle.toFixed(3)}</span></div>
+      <div class="dumbbell-track">
+        <span class="connector" style="--from:${pos(from)};--to:${pos(to)}"></span>
+        <span class="dot" title="42nd Street Shuttle: ${row.shuttle.toFixed(3)}" style="--x:${pos(row.shuttle)};--route:#808183">S</span>
+        <span class="dot-value" style="--x:${pos(row.shuttle)}">${row.shuttle.toFixed(3)}</span>
+        <span class="dot" title="A train: ${row.a.toFixed(3)}" style="--x:${pos(row.a)};--route:#0039A6">A</span>
+        <span class="dot-value" style="--x:${pos(row.a)}">${row.a.toFixed(3)}</span>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("key-visual").setAttribute("aria-label",
+    `With real histories, A train score ${scenarios[0].a.toFixed(3)} and 42nd Street Shuttle ${scenarios[0].shuttle.toFixed(3)}. ` +
+    `With history frozen, A train ${scenarios[1].a.toFixed(3)} and 42nd Street Shuttle ${scenarios[1].shuttle.toFixed(3)}.`);
+}
+
+/* Attribution groups: leave-one-group-out against the reference hour. */
+const ATTR_GROUPS = [
+  ["Line's disruption history", ["line_positive_rate_prior_7d", "line_positive_rate_prior_30d"]],
+  ["Hour of day", ["hour_of_day"]],
+  ["Line identity (one-hot)", MODEL.lines.map(l => "line_" + l)],
+  ["Day of week / weekend", ["day_of_week", "is_weekend"]],
+  ["Recent incidents, this line", ["line_event_starts_prior_1h", "line_event_starts_prior_3h",
+    "line_event_starts_prior_6h", "line_event_starts_prior_24h", "hours_since_line_disruption"]],
+  ["Recent incidents, system-wide", ["system_event_line_starts_prior_1h", "system_event_line_starts_prior_3h",
+    "system_event_line_starts_prior_6h", "system_event_line_starts_prior_24h",
+    "system_positive_line_rate_prior_7d"]],
+  ["Scheduled service volume", ["scheduled_revenue_stop_departures", "line_history_hours"]],
+  ["Month", ["calendar_month"]]
+];
+
+function attribution(scen) {
+  const full = rawScore(vectorize(scen));
+  return ATTR_GROUPS.map(([name, keys]) => {
+    const counterfactual = Object.assign({}, scen);
+    keys.forEach(k => { if (k in REF_SCEN) counterfactual[k] = REF_SCEN[k]; });
+    return {key: name, value: full - rawScore(vectorize(counterfactual))};
+  }).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+}
+
+/* ---------- threshold explorer maths ----------
+   Suffix sums over the exported test-set score histograms give the exact
+   confusion matrix at any bin edge, without shipping 157,922 raw scores. */
+const TS = MODEL.test_scores;
+const SUF_POS = new Float64Array(TS.bins + 1);
+const SUF_NEG = new Float64Array(TS.bins + 1);
+for (let i = TS.bins - 1; i >= 0; i--) {
+  SUF_POS[i] = SUF_POS[i + 1] + TS.positives[i];
+  SUF_NEG[i] = SUF_NEG[i + 1] + TS.negatives[i];
+}
+function confusion(threshold) {
+  const k = Math.min(TS.bins, Math.max(0, Math.round(threshold * TS.bins)));
+  const tp = SUF_POS[k], fp = SUF_NEG[k];
+  const fn = TS.n_pos - tp, tn = TS.n_neg - fp;
+  const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+  const recall = TS.n_pos > 0 ? tp / TS.n_pos : 0;
+  const f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+  return {tp, fp, fn, tn, precision, recall, f1};
+}
+const BASE_RATE = TS.n_pos / (TS.n_pos + TS.n_neg);
+
+/* Score -> observed rate in the nearest held-out calibration bin.
+   This is the honest context for an uncalibrated score. */
+function calibratedRate(score) {
+  const c = DATA.calibration;
+  let nearest = c[0];
+  for (let i = 1; i < c.length; i++) {
+    if (Math.abs(c[i][0] - score) < Math.abs(nearest[0] - score)) nearest = c[i];
+  }
+  return {v: nearest[1], approx: score < c[0][0] || score > c[c.length - 1][0]};
+}
+
+/* Where this score falls among all held-out hours. */
+function percentile(score) {
+  const k = Math.min(TS.bins, Math.max(0, Math.round(score * TS.bins)));
+  const above = SUF_POS[k] + SUF_NEG[k];
+  return 1 - above / (TS.n_pos + TS.n_neg);
+}
+
+/* ================= interactive: threshold explorer ================= */
+function renderThreshold() {
+  const thr = parseFloat(document.getElementById("thr-slider").value);
+  const c = confusion(thr);
+  const n = v => Math.round(v).toLocaleString();
+
+  document.getElementById("thr-val").textContent = thr.toFixed(2);
+  document.getElementById("thr-operating").textContent = Math.abs(thr - MODEL.threshold) < 0.0001
+    ? "Published operating point · tuned for validation F1"
+    : (thr < MODEL.threshold ? "Lower threshold · more flags, fewer misses" : "Higher threshold · fewer flags, more misses");
+  document.getElementById("cm-tp").textContent = n(c.tp);
+  document.getElementById("cm-fp").textContent = n(c.fp);
+  document.getElementById("cm-fn").textContent = n(c.fn);
+  document.getElementById("cm-tn").textContent = n(c.tn);
+  document.getElementById("s-prec").textContent = pct(c.precision);
+  document.getElementById("s-rec").textContent = pct(c.recall);
+  document.getElementById("s-f1").textContent = c.f1.toFixed(3);
+  document.getElementById("s-lift").textContent = (c.precision / BASE_RATE).toFixed(2) + "×";
+
+  const flagged = c.tp + c.fp;
+  document.getElementById("s-flagged").textContent = n(flagged);
+  document.getElementById("thr-hint").textContent =
+    `Flags ${n(flagged)} of ${n(TS.n_pos + TS.n_neg)} held-out hours ` +
+    `(${pct(flagged / (TS.n_pos + TS.n_neg))}).`;
+  document.getElementById("thr-plain").innerHTML =
+    `In plain terms: of every 100 hours this setting flags, about ` +
+    `<b>${Math.round(c.precision * 100)}</b> actually see a disruption, and it ` +
+    `catches <b>${Math.round(c.recall * 100)}%</b> of the disruptions that happen. ` +
+    `It misses <b>${n(c.fn)}</b> of them.`;
+
+  const S = [css("--s1"), css("--s2"), css("--s3")];
+  const pts = {p: [], r: [], f: []};
+  for (let i = 2; i <= 98; i++) {
+    const t = i / 100, x = confusion(t);
+    pts.p.push([t, x.precision]); pts.r.push([t, x.recall]); pts.f.push([t, x.f1]);
+  }
+  const series = [
+    {name: "Precision", color: S[0], points: pts.p},
+    {name: "Recall", color: S[1], points: pts.r},
+    {name: "F1", color: S[2], points: pts.f}
+  ];
+  legend("l-thr", series);
+  lineChart("c-thr", "t-thr", series, {
+    label: "Precision, recall and F1 across every decision threshold", height: 280,
+    xDomain: [0, 1], yDomain: [0, 1],
+    xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1],
+    xFmt: v => v.toFixed(2), yFmt: pct0, refLine: BASE_RATE,
+    vRule: thr, vLabel: "your threshold",
+    xTitle: "Decision threshold", yTitle: "Metric value",
+    tipLabel: v => "Threshold " + v.toFixed(2), tipFmt: v => pct(v)
+  });
+}
+
+/* ================= interactive: live predictor ================= */
+const MONTHS = ["", "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+const hourLabel = h => h === 0 ? "12 AM" : h < 12 ? h + " AM" : h === 12 ? "12 PM" : (h - 12) + " PM";
+
+const P = {line: REF_LINE, frozen: null};
+const $ = id => document.getElementById(id);
+
+/* The sliders that map one-to-one onto a model feature. */
+const SLIDERS = [
+  ["f-rate30", "line_positive_rate_prior_30d", "v-rate30", v => pct(v)],
+  ["f-line3h", "line_event_starts_prior_3h", "v-line3h", v => v.toFixed(0)],
+  ["f-sys3h", "system_event_line_starts_prior_3h", "v-sys3h", v => v.toFixed(0)],
+  ["f-since", "hours_since_line_disruption", "v-since", v => v.toFixed(0) + " h"],
+  ["f-sched", "scheduled_revenue_stop_departures", "v-sched", v => Math.round(v).toLocaleString()]
+];
+
+/* Move the history sliders onto either this line's typical values or the
+   generic reference hour. Without this the profile switch would be inert:
+   the sliders would still be holding the previous line's profile, so the only
+   thing changing would be features the sliders immediately overwrite. */
+function applyLineFeatures() {
+  const src = Object.assign({}, MODEL.reference, MODEL.line_profile[P.line] || {});
+  SLIDERS.forEach(([id, feat]) => { if (feat in src) $(id).value = src[feat]; });
+}
+
+/* Push a scenario object out into the controls. */
+function loadScenario(scen) {
+  $("f-hour").value = scen.hour_of_day;
+  $("f-month").value = scen.calendar_month;
+  $("f-dow").value = String(scen.day_of_week);
+  SLIDERS.forEach(([id, feat]) => { $(id).value = scen[feat]; });
+}
+
+/* Read the controls back into a full feature scenario. */
+function setScenarioLine(scen, line) {
+  MODEL.lines.forEach(l => { scen["line_" + l] = 0; });
+  if (FIDX["line_" + line] !== undefined) scen["line_" + line] = 1;
+  return scen;
+}
+
+function scenarioFromControls(scen) {
+  scen.hour_of_day = +$("f-hour").value;
+  scen.calendar_month = +$("f-month").value;
+  const dow = +$("f-dow").value;
+  scen.day_of_week = dow;
+  scen.is_weekend = (dow === 0 || dow === 6) ? 1 : 0;
+  SLIDERS.forEach(([id, feat]) => { scen[feat] = +$(id).value; });
+  // Keep the correlated trailing windows coherent rather than letting the user
+  // set a 30-day rate that contradicts the 7-day one the profile supplied.
+  scen.line_positive_rate_prior_7d = scen.line_positive_rate_prior_30d;
+  scen.line_event_starts_prior_1h = Math.min(scen.line_event_starts_prior_3h, 2);
+  scen.line_event_starts_prior_6h = scen.line_event_starts_prior_3h * 1.6;
+  scen.system_event_line_starts_prior_1h = scen.system_event_line_starts_prior_3h / 3;
+  scen.system_event_line_starts_prior_6h = scen.system_event_line_starts_prior_3h * 1.7;
+  return scen;
+}
+
+function currentScenario() {
+  const useProfile = $("opt-profile").checked;
+  const base = !useProfile && P.frozen
+    ? setScenarioLine(Object.assign({}, P.frozen), P.line)
+    : baseScenario(P.line, useProfile);
+  return scenarioFromControls(base);
+}
+
+function renderPredictor() {
+  const scen = currentScenario();
+  const score = scoreOf(scen);
+  const thr = parseFloat($("thr-slider").value);
+
+  $("v-hour").textContent = hourLabel(+$("f-hour").value);
+  $("v-month").textContent = MONTHS[+$("f-month").value];
+  SLIDERS.forEach(([id, feat, out, fmt]) => { $(out).textContent = fmt(+$(id).value); });
+
+  $("p-score").textContent = score.toFixed(3);
+  $("p-threshold").textContent = thr.toFixed(2);
+  const v = $("p-verdict");
+  v.textContent = score >= thr ? "Would flag" : "Would stay quiet";
+  v.className = "verdict " + (score >= thr ? "flag" : "clear");
+  $("p-pctile").textContent =
+    `Higher than ${pct0(percentile(score))} of held-out hours · threshold ${thr.toFixed(2)}`;
+
+  const cal = calibratedRate(score);
+  $("p-cal").textContent = (cal.approx ? "≈" : "") + pct(cal.v);
+  $("p-base").textContent = pct(BASE_RATE);
+
+  const attr = attribution(scen);
+  const up = css("--s2"), down = css("--s1");
+  legend("l-attr", [
+    {name: "Raises the score", color: up},
+    {name: "Lowers the score", color: down}
+  ]);
+  divergingBars("c-attr", "t-attr", attr, {
+    label: "Leave-one-group-out sensitivity, in log-odds",
+    pos: up, neg: down
+  });
+}
+
+/* Diverging horizontal bars around a zero axis, for the attribution readout. */
+function divergingBars(hostId, tipId, items, o) {
+  const host = document.getElementById(hostId);
+  const rowH = 30, W = 820, labelW = 250;
+  const H = items.length * rowH + 30;
+  const s = svgRoot(host, W, H);
+  s.setAttribute("aria-label", o.label);
+  const iw = W - labelW - 90;
+  const max = Math.max(0.05, ...items.map(i => Math.abs(i.value))) * 1.05;
+  const zero = labelW + iw / 2;
+  const sx = v => zero + v / max * (iw / 2);
+  const tip = tipFor(hostId, tipId);
+
+  items.forEach((it, i) => {
+    const y = i * rowH + 8;
+    el("text", {x: labelW - 12, y: y + 15, class: "tick", "text-anchor": "end"}, s)
+      .textContent = it.key;
+    const x = Math.min(zero, sx(it.value));
+    const w = Math.max(1.5, Math.abs(sx(it.value) - zero));
+    const g = el("g", {}, s);
+    g.style.cursor = "pointer";
+    el("rect", {x, y: y + 3, width: w, height: rowH - 12, rx: 3,
+      fill: it.value >= 0 ? o.pos : o.neg}, g);
+    el("rect", {x: labelW, y, width: iw, height: rowH, fill: "transparent"}, g);
+    const lx = it.value >= 0 ? sx(it.value) + 7 : sx(it.value) - 7;
+    el("text", {x: lx, y: y + 15, class: "tick", fill: css("--ink-2"),
+      "text-anchor": it.value >= 0 ? "start" : "end"}, g)
+      .textContent = (it.value >= 0 ? "+" : "") + it.value.toFixed(3);
+    g.addEventListener("mousemove", ev => tip.show(
+      `<b>${it.key}</b><div class="row"><span>Log-odds shift</span>` +
+      `<span>${(it.value >= 0 ? "+" : "") + it.value.toFixed(4)}</span></div>`, ev));
+    g.addEventListener("mouseleave", () => tip.hide());
+  });
+  el("line", {x1: zero, x2: zero, y1: 4, y2: H - 18, class: "baseline"}, s);
+  el("text", {x: labelW, y: H - 4, class: "axis-title"}, s)
+    .textContent = "← lowers the score      ·      raises the score →";
+}
+
+/* ---------- wiring ---------- */
+function initInteractive() {
+  const picker = $("line-picker");
+  const routeIndex = $("route-index");
+  const routeName = line => LINE_NAME[line] || line + " train";
+  picker.innerHTML = MODEL.lines.map(l => {
+    const [bg, fg] = MTA[l] || ["#808183", "#fff"];
+    return `<button type="button" data-line="${l}" aria-pressed="${l === REF_LINE}"
+      aria-label="${routeName(l)}" title="${routeName(l)}"
+      style="background:${bg};color:${fg};font-size:${l.length > 1 ? 9 : 12}px">${l}</button>`;
+  }).join("");
+  routeIndex.innerHTML = MODEL.lines.map(l => {
+    const [bg, fg] = MTA[l] || ["#808183", "#fff"];
+    return `<a href="#predictor" data-line="${l}" aria-label="Try ${routeName(l)}"
+      aria-current="${l === REF_LINE}" title="Try ${routeName(l)}"
+      style="background:${bg};color:${fg};font-size:${l.length > 1 ? 9 : 12}px">${l}</a>`;
+  }).join("");
+
+  const syncRouteSelection = () => {
+    [...picker.children].forEach(c =>
+      c.setAttribute("aria-pressed", c.dataset.line === P.line));
+    [...routeIndex.children].forEach(c =>
+      c.setAttribute("aria-current", c.dataset.line === P.line ? "true" : "false"));
+  };
+  const selectLine = line => {
+    P.line = line;
+    syncRouteSelection();
+    // With the switch off, leave every historical condition frozen so the
+    // route controls isolate the one-hot identity.
+    if ($("opt-profile").checked) applyLineFeatures();
+    renderPredictor();
+  };
+
+  picker.addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-line]");
+    if (!b) return;
+    selectLine(b.dataset.line);
+  });
+  routeIndex.addEventListener("click", ev => {
+    const route = ev.target.closest("a[data-line]");
+    if (!route) return;
+    selectLine(route.dataset.line);
+  });
+
+  loadScenario(REF_SCEN);
+
+  $("btn-reset").addEventListener("click", () => {
+    P.line = REF_LINE;
+    P.frozen = null;
+    $("opt-profile").checked = true;
+    syncRouteSelection();
+    loadScenario(REF_SCEN);
+    renderPredictor();
+  });
+  $("btn-worst").addEventListener("click", () => {
+    const worst = [...DATA.by_line].sort((a, b) => b.prevalence - a.prevalence)[0].line;
+    P.line = worst;
+    syncRouteSelection();
+    loadScenario(Object.assign({}, REF_SCEN, {
+      hour_of_day: 17, day_of_week: 3, calendar_month: 6,
+      line_positive_rate_prior_30d: 0.30, line_event_starts_prior_3h: 3,
+      system_event_line_starts_prior_3h: 45, hours_since_line_disruption: 1,
+      scheduled_revenue_stop_departures: 900
+    }));
+    $("f-dow").value = "3";
+    renderPredictor();
+  });
+  $("btn-best").addEventListener("click", () => {
+    const best = [...DATA.by_line].sort((a, b) => a.prevalence - b.prevalence)[0].line;
+    P.line = best;
+    syncRouteSelection();
+    loadScenario(Object.assign({}, REF_SCEN, {
+      hour_of_day: 3, day_of_week: 0, calendar_month: 2,
+      line_positive_rate_prior_30d: 0.02, line_event_starts_prior_3h: 0,
+      system_event_line_starts_prior_3h: 2, hours_since_line_disruption: 70,
+      scheduled_revenue_stop_departures: 60
+    }));
+    $("f-dow").value = "0";
+    renderPredictor();
+  });
+
+  $("opt-profile").addEventListener("change", () => {
+    if ($("opt-profile").checked) {
+      P.frozen = null;
+      applyLineFeatures();
+    } else {
+      P.frozen = scenarioFromControls(baseScenario(P.line, true));
+    }
+    renderPredictor();
+  });
+
+  ["f-hour", "f-month", "f-dow", ...SLIDERS.map(s => s[0])]
+    .forEach(id => $(id).addEventListener("input", renderPredictor));
+
+  $("thr-slider").addEventListener("input", () => { renderThreshold(); renderPredictor(); });
+  $("btn-thr-reset").addEventListener("click", () => {
+    $("thr-slider").value = MODEL.threshold.toFixed(2);
+    renderThreshold();
+    renderPredictor();
+    $("thr-slider").focus();
+  });
+}
+
+function initSectionNav() {
+  const links = [...document.querySelectorAll(".nav-links a")];
+  const byId = new Map(links.map(link => [link.getAttribute("href").slice(1), link]));
+  const setActive = id => links.forEach(link => link.setAttribute("aria-current", link === byId.get(id) ? "true" : "false"));
+  setActive("overview");
+  links.forEach(link => link.addEventListener("click", () => setActive(link.getAttribute("href").slice(1))));
+  if (!("IntersectionObserver" in window)) return;
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible) setActive(visible.target.id);
+  }, {rootMargin: "-15% 0px -70% 0px", threshold: [0, .1, .5]});
+  byId.forEach((link, id) => observer.observe(document.getElementById(id)));
+}
+
+/* ================= render ================= */
+function render() {
+  const S = [css("--s1"), css("--s2"), css("--s3")];
+  const NAMES = ["Historical-rate baseline", "Logistic regression", "Gradient boosting"];
+
+  /* model comparison */
+  hbarChart("c-models", "t-models", DATA.models.map((m, i) => ({
+    key: m.model, value: m.pr_auc,
+    color: m.model === "Gradient boosting" ? css("--s1") : css("--ink-3")
+  })), {
+    label: "PR-AUC by model", xTitle: "PR-AUC (higher is better)",
+    fmt: v => v.toFixed(4),
+    tip: it => {
+      const m = DATA.models.find(x => x.model === it.key);
+      return `<b>${m.model}</b>
+        <div class="row"><span>PR-AUC</span><span>${m.pr_auc.toFixed(4)}</span></div>
+        <div class="row"><span>ROC-AUC</span><span>${m.roc_auc.toFixed(4)}</span></div>
+        <div class="row"><span>Precision</span><span>${pct(m.precision)}</span></div>
+        <div class="row"><span>Recall</span><span>${pct(m.recall)}</span></div>`;
+    }
+  });
+
+  document.getElementById("tbody-models").innerHTML = DATA.models.map(m =>
+    `<tr class="${m.model === "Gradient boosting" ? "best" : ""}">
+      <td>${m.model}</td><td>${m.pr_auc.toFixed(4)}</td><td>${m.roc_auc.toFixed(4)}</td>
+      <td>${pct(m.precision)}</td><td>${pct(m.recall)}</td><td>${m.threshold.toFixed(2)}</td>
+    </tr>`).join("");
+
+  /* PR curves */
+  const prSeries = NAMES.map((n, i) => ({name: n, color: S[i], points: DATA.pr_curves[n]}));
+  legend("l-pr", prSeries);
+  lineChart("c-pr", "t-pr", prSeries, {
+    label: "Precision-recall curves", height: 300,
+    xDomain: [0, 1], yDomain: [0, 1],
+    xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1],
+    yFmt: pct0, xFmt: pct0, refLine: DATA.meta.test_rate,
+    xTitle: "Recall", yTitle: "Precision",
+    tipLabel: v => "Recall " + pct(v), tipFmt: v => pct(v)
+  });
+  const rows = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 199];
+  document.getElementById("tbody-pr").innerHTML = rows.map(i => {
+    const b = DATA.pr_curves[NAMES[0]][i];
+    if (!b) return "";
+    return `<tr><td>${pct(b[0])}</td>${NAMES.map(n =>
+      `<td>${DATA.pr_curves[n][i] ? pct(DATA.pr_curves[n][i][1]) : "—"}</td>`).join("")}</tr>`;
+  }).join("");
+
+  /* calibration */
+  legend("l-cal", [{name: "Gradient boosting", color: S[0]}, {name: "Perfect calibration", color: css("--ink-3")}]);
+  lineChart("c-cal", "t-cal", [{name: "Observed rate", color: S[0], points: DATA.calibration, dots: true}], {
+    label: "Calibration curve", height: 300,
+    xDomain: [0, 0.8], yDomain: [0, 0.8],
+    xTicks: [0, 0.2, 0.4, 0.6, 0.8], yTicks: [0, 0.2, 0.4, 0.6, 0.8],
+    yFmt: pct0, xFmt: pct0, diagonal: true,
+    xTitle: "Model score", yTitle: "Observed rate",
+    tipLabel: v => "Model score " + v.toFixed(2), tipFmt: v => pct(v)
+  });
+
+  /* prevalence by line */
+  const maxLine = Math.max(...DATA.by_line.map(d => d.prevalence));
+  barChart("c-lines", "t-lines", DATA.by_line.map(d => ({
+    key: d.line, value: d.prevalence,
+    color: mixHex(css("--seq-1"), css("--seq-7"), 0.25 + 0.75 * (d.prevalence / maxLine))
+  })), {
+    label: "Disruption rate by line", height: 300, max: 0.26, bottom: 46,
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2, 0.25], yTitle: "Disruption rate", bullets: true,
+    tip: it => {
+      const d = DATA.by_line.find(x => x.line === it.key);
+      return `<b>${LINE_NAME[d.line] || d.line + " train"}</b>
+        <div class="row"><span>Rate</span><span>${pct(d.prevalence)}</span></div>
+        <div class="row"><span>Disrupted</span><span>${d.positives.toLocaleString()}</span></div>
+        <div class="row"><span>Eligible hours</span><span>${d.line_hours.toLocaleString()}</span></div>`;
+    }
+  });
+  document.getElementById("tbody-lines").innerHTML = DATA.by_line.map(d =>
+    `<tr><td>${LINE_NAME[d.line] || d.line}</td><td>${d.line_hours.toLocaleString()}</td>
+     <td>${d.positives.toLocaleString()}</td><td>${pct(d.prevalence)}</td></tr>`).join("");
+
+  /* hour of day */
+  const hourSeries = [
+    {name: "Weekday", color: S[0], points: DATA.by_hour.map(d => [d.hour, d.weekday])},
+    {name: "Weekend", color: S[1], points: DATA.by_hour.map(d => [d.hour, d.weekend])}
+  ];
+  legend("l-hour", hourSeries);
+  lineChart("c-hour", "t-hour", hourSeries, {
+    label: "Disruption rate by hour of day", height: 260,
+    xDomain: [0, 23], yDomain: [0, 0.22],
+    xTicks: [{v: 0, label: "12a"}, {v: 6, label: "6a"}, {v: 12, label: "12p"}, {v: 18, label: "6p"}, {v: 23, label: "11p"}],
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2], yFmt: pct0,
+    xTitle: "Hour of day", yTitle: "Disruption rate",
+    tipLabel: v => { const h = Math.round(v); return h === 0 ? "12 AM" : h < 12 ? h + " AM" : h === 12 ? "12 PM" : (h - 12) + " PM"; },
+    tipFmt: pct
+  });
+
+  /* monthly drift */
+  const months = DATA.by_month;
+  const testStart = months.findIndex(m => m.month === DATA.meta.test_start);
+  lineChart("c-month", "t-month", [
+    {name: "Monthly rate", color: S[0], points: months.map((d, i) => [i, d.prevalence])}
+  ], {
+    label: "Monthly disruption rate", height: 260,
+    xDomain: [0, months.length - 1], yDomain: [0, 0.22],
+    xTicks: months.map((d, i) => ({v: i, label: d.month.endsWith("-01") ? d.month.slice(0, 4) : null}))
+      .filter(t => t.label),
+    yTicks: [0, 0.05, 0.1, 0.15, 0.2], yFmt: pct0,
+    bands: [{from: testStart, to: months.length - 1, label: "test"}],
+    xTitle: "Month", yTitle: "Disruption rate",
+    tipLabel: i => months[Math.round(i)] ? months[Math.round(i)].month : "",
+    tipFmt: pct
+  });
+
+  /* importance */
+  hbarChart("c-imp", "t-imp", DATA.importance.map((d, i) => ({
+    key: d.feature, value: d.value, color: i < 2 ? css("--s1") : css("--ink-3")
+  })), {
+    label: "Permutation importance", labelW: 290,
+    xTitle: "Drop in average precision when shuffled",
+    fmt: v => v.toFixed(4),
+    tip: it => `<b>${it.key}</b><div class="row"><span>Importance</span><span>${it.value.toFixed(4)}</span></div>`
+  });
+
+  /* interactive sections re-render too, so they follow the theme */
+  renderThreshold();
+  renderPredictor();
+  renderKeyFinding();
+}
+
+initInteractive();
+initSectionNav();
+render();
+</script>
+</body>
+</html>
