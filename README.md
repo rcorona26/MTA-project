@@ -1,10 +1,10 @@
 # MTA Subway Disruption Prediction
 
-This repository is being rebuilt as a reproducible data and machine-learning
-project. The current implementation creates an auditable **line-hour
-classification target**, downloads historical schedule eligibility, and
-defines leakage-safe as-of features. It does not yet train a model or serve
-live predictions.
+This repository is a reproducible data and machine-learning project. The current
+implementation creates an auditable **line-hour classification target**,
+downloads historical schedule eligibility, defines leakage-safe as-of features,
+trains and evaluates three classifiers, and exports an exact client-side model
+for a self-contained interactive dashboard. It does not serve live predictions.
 
 ## Current target
 
