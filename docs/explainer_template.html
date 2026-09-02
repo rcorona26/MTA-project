@@ -167,7 +167,7 @@
   </div>
   <div class="in">
     <h1>Can a computer guess the next subway delay?</h1>
-    <p class="lede">We tried. It can — <b>a little</b>. Here's what we did, what we found, and the real model so you can test it yourself.</p>
+    <p class="lede">We tried. It can, <b>a little</b>. Here's what we did and what we found, plus the real model so you can test it yourself.</p>
     <div class="bullets" id="hero-bullets" aria-label="Pick a subway line to try"></div>
     <p class="hint">Tap a line to jump to the model.</p>
   </div>
@@ -178,7 +178,7 @@
   <section id="tried" aria-labelledby="tried-h">
     <h2 class="stop" id="tried-h">What we tried</h2>
     <p>Every hour, on every subway line, the MTA might post an alert that says "delays" or "service suspended." We asked a simple question: <strong>can a computer look at what already happened and guess whether an alert like that is coming in the next hour?</strong></p>
-    <p>We gave the computer only things it could know ahead of time: which line it is, what time it is, and how much trouble that line has had lately. Then we showed it __ROWS__ hours of history — every line, every hour, from __SNAP_START__ to __SNAP_END__ — and let it look for patterns.</p>
+    <p>We gave the computer only things it could know ahead of time: which line it is, what time it is, and how much trouble that line has had lately. Then we showed it __ROWS__ hours of history, every line and every hour from __SNAP_START__ to __SNAP_END__, and let it look for patterns.</p>
     <div class="rulebox">
       <p><strong>The rule we asked it to learn:</strong> a line-hour counts as a "bad hour" if an unplanned delay or suspension alert for that line starts inside the next 60 minutes. Planned work, like weekend track repairs, does not count.</p>
     </div>
@@ -187,7 +187,7 @@
 
   <section id="try" aria-labelledby="try-h">
     <h2 class="stop" id="try-h">Try the model</h2>
-    <p>This is the actual model, running in your browser. Three things change its answer. Move them and watch the train.</p>
+    <p>This is the actual model, running in your browser. Move the three controls and watch the train.</p>
 
     <div class="try">
       <div class="controls">
@@ -235,7 +235,7 @@
     <div class="finding">
       <div>
         <h3>It catches most bad hours…</h3>
-        <p>When we used the model's alarm line, it noticed <strong id="f-recall"></strong> of the real disruptions in the test months. Guessing at random would have found far fewer.</p>
+        <p>When we used the model's alarm line, it noticed <strong id="f-recall"></strong> of the real disruptions in the test months. To catch that many by guessing, you'd have to flag most of the day.</p>
       </div>
       <div>
         <div class="waffle" id="w-recall" role="img" aria-label="Out of 100 real disruptions, the model caught about 63"></div>
@@ -257,7 +257,7 @@
     <div class="finding">
       <div>
         <h3>Mostly it just remembers who's been having a bad month.</h3>
-        <p>We gave the A train two versions of the same hour. One used its real recent history. The other pretended its history was the same as an average line. The score dropped a lot. Which line it is matters a little; what happened lately matters more.</p>
+        <p>We gave the A train two versions of the same hour. One used its real recent history. The other pretended its history was the same as an average line. The score fell from the alarm zone to the middle of the meter. The line's name matters a little. What happened to it lately matters more.</p>
       </div>
       <div class="bars" id="bars" role="img" aria-label="The A train's score with its real history versus an average history"></div>
     </div>
@@ -266,12 +266,12 @@
   <section id="trust" aria-labelledby="trust-h">
     <h2 class="stop" id="trust-h">Why we wouldn't put this in an app</h2>
     <ul>
-      <li><strong>Three out of four alarms would be false.</strong> People would learn to ignore it within a week.</li>
-      <li><strong>The score is a ranking, not a promise.</strong> A 0.60 doesn't mean "60% chance." It means "riskier than a 0.40."</li>
-      <li><strong>It only knows about alerts.</strong> The MTA posts an alert when something has already gone wrong somewhere. A stalled train that never gets an alert is invisible to it.</li>
-      <li><strong>The subway changes.</strong> The pattern it learned from 2021–2024 was still useful in 2025, but there's no guarantee it holds next year.</li>
+      <li>Three out of four alarms would be false. People would learn to ignore it within a week.</li>
+      <li>The score is a ranking, not a promise. A 0.60 doesn't mean "60% chance." It means "riskier than a 0.40."</li>
+      <li>It only knows about alerts. The MTA posts one when something has already gone wrong somewhere, so a stalled train that never gets an alert is invisible to it.</li>
+      <li>The subway changes. The pattern it learned from 2021 to 2024 still worked in 2025, but nothing guarantees it holds next year.</li>
     </ul>
-    <p>What it <em>is</em> good for: helping someone decide where to look first. That's a smaller, more honest job than predicting the future.</p>
+    <p>What it is good for: helping someone decide where to look first. That's a smaller job than predicting the future, and one it can actually do.</p>
   </section>
 
   <section id="more" aria-labelledby="more-h">
@@ -480,10 +480,10 @@ function render() {
   $("score-line").innerHTML = `The ${name} scores <span class="num">${score.toFixed(2)}</span>.`;
   const gap = score - thr;
   $("verdict").textContent = gap >= 0
-    ? `That's over the alarm line. The model would flag the next hour — ${when}, after a ${roughWord(P.rough)} month.`
+    ? `That's over the alarm line. At ${when}, after a ${roughWord(P.rough)} month, the model would flag the next hour.`
     : gap > -0.15
-      ? `That's just under the alarm line. The model would stay quiet, but it's watching — ${when}, after a ${roughWord(P.rough)} month.`
-      : `That's well under the alarm line. The model would stay quiet — ${when}, after a ${roughWord(P.rough)} month.`;
+      ? `That's just under the alarm line. At ${when}, after a ${roughWord(P.rough)} month, the model would stay quiet, but not by much.`
+      : `That's well under the alarm line. At ${when}, after a ${roughWord(P.rough)} month, the model would stay quiet.`;
 
   const near = nearbyRate(score);
   const per100 = Math.round(near.rate * 100);
