@@ -2,9 +2,10 @@
 Render the retrospective dashboard from the exported metrics.
 
 Run export_dashboard_data.py first to refresh docs/dashboard_data.json, then
-this to inject it into docs/dashboard_template.html and write the standalone
-page. The output is self-contained — no external scripts, styles, or fonts —
-so it can be opened directly or published as-is.
+this to inject it into the templates and write the standalone pages: the
+plain-words explainer (docs/index.html) and the research brief
+(docs/dashboard.html). Both outputs are self-contained — no external scripts,
+styles, or fonts — so they can be opened directly or published as-is.
 """
 
 import json
@@ -15,6 +16,8 @@ TEMPLATE = ROOT / "docs/dashboard_template.html"
 DATA = ROOT / "docs/dashboard_data.json"
 MODEL = ROOT / "docs/model_bundle.json"
 OUTPUT = ROOT / "docs/dashboard.html"
+EXPLAINER_TEMPLATE = ROOT / "docs/explainer_template.html"
+EXPLAINER_OUTPUT = ROOT / "docs/index.html"
 
 
 def render_page(template, data, model):
@@ -37,14 +40,13 @@ def render_page(template, data, model):
 
 
 def main():
-    template = open(TEMPLATE).read()
     data = json.load(open(DATA))
     model = json.load(open(MODEL))
-    page = render_page(template, data, model)
-
-    with open(OUTPUT, "w") as handle:
-        handle.write(page)
-    print(f"Wrote {OUTPUT.relative_to(ROOT)} ({len(page):,} bytes)")
+    for template_path, output_path in ((TEMPLATE, OUTPUT), (EXPLAINER_TEMPLATE, EXPLAINER_OUTPUT)):
+        page = render_page(open(template_path).read(), data, model)
+        with open(output_path, "w") as handle:
+            handle.write(page)
+        print(f"Wrote {output_path.relative_to(ROOT)} ({len(page):,} bytes)")
 
 
 if __name__ == "__main__":

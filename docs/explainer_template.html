@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A plain-words explanation of our attempt to predict New York City subway disruptions an hour ahead, with the real model you can try yourself.">
+<link rel="icon" href="data:,">
+<title>Can a computer guess the next subway delay?</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ground: #ffffff;
+    --ink: #000000;
+    --ink-2: #4a4a48;
+    --rule: #d9d9d4;
+    --track: #ecece8;
+    --sign: #000000;
+    --sign-ink: #ffffff;
+    --focus: #0039a6;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --measure: 68ch;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 4rem; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 1.125rem;
+    line-height: 1.55;
+    accent-color: var(--ink);
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: .18em; }
+  a:hover { text-decoration-thickness: 3px; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  p { margin: 0 0 1.1em; max-width: var(--measure); }
+  ul { max-width: var(--measure); padding-left: 1.2em; }
+  li { margin-bottom: .5em; }
+  strong { font-weight: 700; }
+  .skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 50; transform: translateY(-160%); background: var(--sign); color: var(--sign-ink); padding: .65rem .9rem; font-weight: 700; }
+  .skip-link:focus { transform: none; }
+
+  /* ---------- station signage ---------- */
+  .sign { background: var(--sign); color: var(--sign-ink); }
+  .sign a { color: var(--sign-ink); }
+  .sign :focus-visible { outline-color: #fccc0a; }
+  .topbar { border-bottom: 1px solid #333; }
+  .topbar .in { width: min(1100px, calc(100% - 2.5rem)); margin: 0 auto; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .95rem; }
+  .topbar .in span { font-weight: 700; }
+  .topbar nav { display: flex; gap: 1.4rem; }
+  .topbar nav a { text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  .topbar nav a:hover { text-decoration: underline; }
+
+  .hero .in { width: min(1100px, calc(100% - 2.5rem)); margin: 0 auto; padding: clamp(3rem, 8vw, 6.5rem) 0 clamp(2.5rem, 6vw, 4.5rem); }
+  h1 {
+    font-size: clamp(2.3rem, 6.8vw, 5.4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: .96;
+    margin: 0 0 1.2rem;
+    max-width: 16ch;
+    text-wrap: balance;
+  }
+  .hero .lede { font-size: clamp(1.15rem, 2.2vw, 1.5rem); line-height: 1.4; max-width: 34ch; margin-bottom: 2.2rem; color: #e8e8e4; }
+  .hero .lede b { color: #fff; font-weight: 700; }
+  .bullets { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 640px; }
+  .bullet {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 50%;
+    font-weight: 700; font-size: 1.1rem; line-height: 1;
+    border: 0; padding: 0; cursor: pointer; text-decoration: none;
+    box-shadow: 0 0 0 0 transparent;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .bullet:hover { transform: scale(1.08); }
+  .bullet[aria-pressed="true"], .bullet[aria-current="true"] { box-shadow: 0 0 0 4px var(--ground), 0 0 0 7px var(--ink); }
+  .sign .bullet[aria-current="true"] { box-shadow: 0 0 0 4px var(--sign), 0 0 0 7px #fff; }
+  .bullet.two { font-size: .8rem; }
+  .hero .hint { margin-top: 1rem; font-size: .95rem; color: #bdbdb8; }
+
+  /* ---------- sections ---------- */
+  main { width: min(1100px, calc(100% - 2.5rem)); margin: 0 auto; }
+  section { padding: clamp(2.5rem, 6vw, 4.5rem) 0; border-bottom: 1px solid var(--rule); }
+  section:last-of-type { border-bottom: 0; }
+  .stop {
+    display: inline-flex; align-items: center; gap: .9rem;
+    background: var(--sign); color: var(--sign-ink);
+    padding: .55rem 1.1rem .55rem .9rem;
+    margin: 0 0 1.6rem;
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem); font-weight: 700; letter-spacing: -0.015em; line-height: 1.15;
+  }
+  .stop::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #fff; flex: none; }
+  h3 { font-size: 1.25rem; font-weight: 700; margin: 1.6rem 0 .5rem; letter-spacing: -0.01em; }
+  .rulebox { border: 3px solid var(--ink); padding: 1rem 1.2rem; max-width: var(--measure); margin: 1.4rem 0; font-size: 1.05rem; }
+  .rulebox p:last-child { margin-bottom: 0; }
+  .small { font-size: .95rem; color: var(--ink-2); }
+
+  /* ---------- try it ---------- */
+  .try { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+  @media (max-width: 800px) { .try { grid-template-columns: 1fr; } }
+  .ctl { margin-bottom: 1.6rem; }
+  .ctl > label, .ctl > .lbl { display: block; font-weight: 700; margin-bottom: .45rem; }
+  .ctl .val { font-weight: 400; color: var(--ink-2); }
+  .picker { display: flex; flex-wrap: wrap; gap: .45rem; }
+  input[type="range"] { width: 100%; max-width: 420px; height: 44px; margin: 0; cursor: pointer; }
+  .ends { display: flex; justify-content: space-between; max-width: 420px; font-size: .9rem; color: var(--ink-2); margin-top: -.3rem; }
+  .seg { display: inline-flex; border: 2px solid var(--ink); }
+  .seg button { background: none; border: 0; padding: 0 1.1rem; min-height: 44px; font: inherit; font-weight: 700; cursor: pointer; color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .seg button + button { border-left: 2px solid var(--ink); }
+  .resetbtn { background: none; border: 2px solid var(--ink); font: inherit; font-weight: 700; padding: 0 1rem; min-height: 44px; cursor: pointer; }
+  .resetbtn:hover { background: var(--ink); color: #fff; }
+
+  .result { position: sticky; top: 1rem; }
+  .score-line { font-size: clamp(1.4rem, 2.8vw, 2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 .4rem; max-width: 22ch; }
+  .score-line .num { font-variant-numeric: tabular-nums; }
+  .verdict { font-size: 1.1rem; margin: 0 0 1rem; max-width: 40ch; }
+  .meter { width: 100%; height: auto; display: block; margin: .5rem 0 1rem; overflow: visible; }
+  .meter text { font-family: var(--sans); }
+  .meter .band { font-size: 13px; font-weight: 700; fill: var(--ink); }
+  .meter .tick-label { font-size: 12px; fill: var(--ink-2); }
+  .meter .marker-label { font-size: 15px; font-weight: 700; }
+  .meter .train { transition: transform .25s ease; }
+  @media (prefers-reduced-motion: reduce) { .meter .train { transition: none; } }
+  .evidence { border-top: 3px solid var(--ink); padding-top: .9rem; font-size: 1rem; max-width: 46ch; }
+  .evidence b { font-variant-numeric: tabular-nums; }
+
+  /* ---------- findings ---------- */
+  .finding { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem 3rem; align-items: center; padding: 1.8rem 0; border-top: 1px solid var(--rule); }
+  .finding:first-of-type { border-top: 0; }
+  @media (max-width: 800px) { .finding { grid-template-columns: 1fr; gap: 1rem; } }
+  .finding h3 { margin-top: 0; font-size: 1.45rem; letter-spacing: -0.015em; max-width: 24ch; }
+  .waffle { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 320px; aspect-ratio: 1; }
+  .waffle span { display: block; background: var(--track); border-radius: 2px; }
+  .waffle span.on { background: var(--ink); }
+  .waffle-cap { font-size: .95rem; color: var(--ink-2); margin-top: .6rem; max-width: 32ch; }
+  .bars { max-width: 420px; }
+  .bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; margin-bottom: 1rem; }
+  .bar .lab { font-size: .95rem; }
+  .bar .trk { height: 34px; background: var(--track); position: relative; }
+  .bar .fil { position: absolute; inset: 0 auto 0 0; background: var(--ink); width: var(--w); }
+  .bar .n { position: absolute; left: calc(var(--w) + 10px); top: 50%; transform: translateY(-50%); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ---------- footer ---------- */
+  .credits .in { width: min(1100px, calc(100% - 2.5rem)); margin: 0 auto; padding: 2.5rem 0 3rem; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); font-size: .98rem; }
+  .credits p { margin: 0 0 .4em; color: #d5d5d0; }
+  .credits b { color: #fff; }
+  .credits .in > div > p:first-child { color: #fff; font-weight: 700; margin-bottom: .6em; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="sign hero">
+  <div class="topbar">
+    <div class="in">
+      <span>Subway delay model</span>
+      <nav aria-label="Pages">
+        <a href="#try">Try it</a>
+        <a href="dashboard.html">Full research brief</a>
+        <a href="https://github.com/rcorona26/MTA-project">Code</a>
+      </nav>
+    </div>
+  </div>
+  <div class="in">
+    <h1>Can a computer guess the next subway delay?</h1>
+    <p class="lede">We tried. It can — <b>a little</b>. Here's what we did, what we found, and the real model so you can test it yourself.</p>
+    <div class="bullets" id="hero-bullets" aria-label="Pick a subway line to try"></div>
+    <p class="hint">Tap a line to jump to the model.</p>
+  </div>
+</header>
+
+<main id="main">
+
+  <section id="tried" aria-labelledby="tried-h">
+    <h2 class="stop" id="tried-h">What we tried</h2>
+    <p>Every hour, on every subway line, the MTA might post an alert that says "delays" or "service suspended." We asked a simple question: <strong>can a computer look at what already happened and guess whether an alert like that is coming in the next hour?</strong></p>
+    <p>We gave the computer only things it could know ahead of time: which line it is, what time it is, and how much trouble that line has had lately. Then we showed it __ROWS__ hours of history — every line, every hour, from __SNAP_START__ to __SNAP_END__ — and let it look for patterns.</p>
+    <div class="rulebox">
+      <p><strong>The rule we asked it to learn:</strong> a line-hour counts as a "bad hour" if an unplanned delay or suspension alert for that line starts inside the next 60 minutes. Planned work, like weekend track repairs, does not count.</p>
+    </div>
+    <p>To be fair, we tested it on months it had never seen. Everything below comes from that test: the last 15% of the timeline, starting in July 2025.</p>
+  </section>
+
+  <section id="try" aria-labelledby="try-h">
+    <h2 class="stop" id="try-h">Try the model</h2>
+    <p>This is the actual model, running in your browser. Three things change its answer. Move them and watch the train.</p>
+
+    <div class="try">
+      <div class="controls">
+        <div class="ctl">
+          <span class="lbl" id="line-lbl">Which line?</span>
+          <div class="picker" id="picker" role="group" aria-labelledby="line-lbl"></div>
+        </div>
+
+        <div class="ctl">
+          <label for="rough">How rough has this line's month been? <span class="val" id="rough-val"></span></label>
+          <input type="range" id="rough" min="0" max="100" step="1" value="30" aria-describedby="rough-help">
+          <div class="ends" aria-hidden="true"><span>Smooth</span><span>Terrible</span></div>
+          <p class="small" id="rough-help" style="margin-top:.5rem">Starts at the line's real average. Dragging it changes the line's recent alert count, its 30-day disruption rate, and how long since its last problem, all together.</p>
+        </div>
+
+        <div class="ctl">
+          <label for="hour">What time is it? <span class="val" id="hour-val"></span></label>
+          <input type="range" id="hour" min="0" max="23" step="1" value="8">
+          <div class="ends" aria-hidden="true"><span>Midnight</span><span>11 PM</span></div>
+        </div>
+
+        <div class="ctl">
+          <span class="lbl" id="day-lbl">What kind of day?</span>
+          <div class="seg" role="group" aria-labelledby="day-lbl">
+            <button type="button" id="day-week" aria-pressed="true">Weekday</button>
+            <button type="button" id="day-end" aria-pressed="false">Weekend</button>
+          </div>
+        </div>
+
+        <button type="button" class="resetbtn" id="reset">Back to this line's real numbers</button>
+      </div>
+
+      <div class="result" aria-live="polite">
+        <p class="score-line" id="score-line"></p>
+        <p class="verdict" id="verdict"></p>
+        <svg class="meter" id="meter" viewBox="0 0 640 150" role="img" aria-labelledby="meter-title"><title id="meter-title">The model's score on a line from quiet to alarm</title></svg>
+        <div class="evidence" id="evidence"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="found" aria-labelledby="found-h">
+    <h2 class="stop" id="found-h">What we found</h2>
+
+    <div class="finding">
+      <div>
+        <h3>It catches most bad hours…</h3>
+        <p>When we used the model's alarm line, it noticed <strong id="f-recall"></strong> of the real disruptions in the test months. Guessing at random would have found far fewer.</p>
+      </div>
+      <div>
+        <div class="waffle" id="w-recall" role="img" aria-label="Out of 100 real disruptions, the model caught about 63"></div>
+        <p class="waffle-cap">Out of 100 real disruptions, the dark squares are the ones the model flagged ahead of time.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div>
+        <h3>…but it cries wolf a lot.</h3>
+        <p>Of every 100 hours the model raised an alarm for, only about <strong id="f-precision"></strong> turned into a real disruption. That's better than the <strong id="f-base"></strong> you'd get by picking hours at random, but not by enough to send riders alerts.</p>
+      </div>
+      <div>
+        <div class="waffle" id="w-precision" role="img" aria-label="Out of 100 alarms, about 24 were real disruptions"></div>
+        <p class="waffle-cap">Out of 100 alarms, the dark squares are the ones that were right.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div>
+        <h3>Mostly it just remembers who's been having a bad month.</h3>
+        <p>We gave the A train two versions of the same hour. One used its real recent history. The other pretended its history was the same as an average line. The score dropped a lot. Which line it is matters a little; what happened lately matters more.</p>
+      </div>
+      <div class="bars" id="bars" role="img" aria-label="The A train's score with its real history versus an average history"></div>
+    </div>
+  </section>
+
+  <section id="trust" aria-labelledby="trust-h">
+    <h2 class="stop" id="trust-h">Why we wouldn't put this in an app</h2>
+    <ul>
+      <li><strong>Three out of four alarms would be false.</strong> People would learn to ignore it within a week.</li>
+      <li><strong>The score is a ranking, not a promise.</strong> A 0.60 doesn't mean "60% chance." It means "riskier than a 0.40."</li>
+      <li><strong>It only knows about alerts.</strong> The MTA posts an alert when something has already gone wrong somewhere. A stalled train that never gets an alert is invisible to it.</li>
+      <li><strong>The subway changes.</strong> The pattern it learned from 2021–2024 was still useful in 2025, but there's no guarantee it holds next year.</li>
+    </ul>
+    <p>What it <em>is</em> good for: helping someone decide where to look first. That's a smaller, more honest job than predicting the future.</p>
+  </section>
+
+  <section id="more" aria-labelledby="more-h">
+    <h2 class="stop" id="more-h">Want the details?</h2>
+    <p>The <a href="dashboard.html">full research brief</a> has the exact numbers, the charts, every threshold, and the sliders for all eighteen inputs. The <a href="https://github.com/rcorona26/MTA-project">code</a> rebuilds everything from the public MTA data with one command.</p>
+  </section>
+
+</main>
+
+<footer class="sign credits">
+  <div class="in">
+    <div>
+      <p>Who made this</p>
+      <p><b>Robert Corona</b> and <b>Andy Lafleur</b>. A retrospective research project; not affiliated with the MTA.</p>
+    </div>
+    <div>
+      <p>Where the data comes from</p>
+      <p>MTA Service Alerts: Beginning April 2020, published by the Metropolitan Transportation Authority on NY Open Data. Snapshot __SNAP_START__ to __SNAP_END__.</p>
+    </div>
+    <div>
+      <p>How the model runs here</p>
+      <p>All 300 decision trees are embedded in this page and scored in your browser. Nothing you do is sent anywhere.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+const MODEL = __MODEL__;
+
+const MTA = {
+  "1":["#EE352E","#fff"],"2":["#EE352E","#fff"],"3":["#EE352E","#fff"],
+  "4":["#00933C","#fff"],"5":["#00933C","#fff"],"6":["#00933C","#fff"],
+  "7":["#B933AD","#fff"],
+  "A":["#0039A6","#fff"],"C":["#0039A6","#fff"],"E":["#0039A6","#fff"],
+  "B":["#FF6319","#fff"],"D":["#FF6319","#fff"],"F":["#FF6319","#fff"],"M":["#FF6319","#fff"],
+  "G":["#6CBE45","#fff"],
+  "J":["#996633","#fff"],"Z":["#996633","#fff"],
+  "L":["#A7A9AC","#000"],
+  "N":["#FCCC0A","#000"],"Q":["#FCCC0A","#000"],"R":["#FCCC0A","#000"],"W":["#FCCC0A","#000"],
+  "H":["#808183","#fff"],"FS":["#808183","#fff"],"GS":["#808183","#fff"]
+};
+const LINE_NAME = {"H":"Rockaway Park Shuttle","FS":"Franklin Avenue Shuttle","GS":"42nd Street Shuttle"};
+const routeName = l => LINE_NAME[l] || l + " train";
+const $ = id => document.getElementById(id);
+
+/* ---------- exact model inference (mirrors dashboard.html and tests) ---------- */
+const FIDX = {};
+MODEL.feature_columns.forEach((name, i) => { FIDX[name] = i; });
+function rawScore(vec) {
+  let total = MODEL.baseline_prediction;
+  const trees = MODEL.trees;
+  for (let t = 0; t < trees.length; t++) {
+    const tree = trees[t];
+    let i = 0;
+    for (;;) {
+      const n = tree[i];
+      if (n[0] === -1) { total += n[1]; break; }
+      const v = vec[n[0]];
+      if (v !== v) i = n[4] ? n[2] : n[3];
+      else i = v <= n[1] ? n[2] : n[3];
+    }
+  }
+  return total;
+}
+const sigmoid = z => 1 / (1 + Math.exp(-z));
+function vectorize(scen) {
+  const vec = new Float64Array(MODEL.feature_columns.length);
+  for (const k in scen) { const i = FIDX[k]; if (i !== undefined) vec[i] = scen[k]; }
+  return vec;
+}
+const scoreOf = scen => sigmoid(rawScore(vectorize(scen)));
+
+function baseScenario(line, applyProfile) {
+  const scen = Object.assign({}, MODEL.reference);
+  MODEL.lines.forEach(l => { scen["line_" + l] = 0; });
+  if (FIDX["line_" + line] !== undefined) scen["line_" + line] = 1;
+  if (applyProfile !== false && MODEL.line_profile[line]) Object.assign(scen, MODEL.line_profile[line]);
+  return scen;
+}
+/* Keep the correlated history windows consistent with one another. */
+function coherent(scen) {
+  scen.line_positive_rate_prior_7d = scen.line_positive_rate_prior_30d;
+  scen.line_event_starts_prior_1h = Math.min(scen.line_event_starts_prior_3h, 2);
+  scen.line_event_starts_prior_6h = scen.line_event_starts_prior_3h * 1.6;
+  scen.system_event_line_starts_prior_1h = scen.system_event_line_starts_prior_3h / 3;
+  scen.system_event_line_starts_prior_6h = scen.system_event_line_starts_prior_3h * 1.7;
+  return scen;
+}
+
+/* ---------- the "rough month" dial ----------
+   One slider (0–100) drives every line-history feature together so the
+   scenario stays physically plausible: a line with a high 30-day rate also
+   has recent incidents and a short gap since the last one. */
+const ROUGH = { rateMin: 0.02, rateMax: 0.40 };
+function roughFromProfile(line) {
+  const p = MODEL.line_profile[line] || MODEL.reference;
+  const r = (p.line_positive_rate_prior_30d - ROUGH.rateMin) / (ROUGH.rateMax - ROUGH.rateMin);
+  return Math.round(Math.max(0, Math.min(1, r)) * 100);
+}
+function applyRough(scen, r) {
+  const t = r / 100;
+  scen.line_positive_rate_prior_30d = ROUGH.rateMin + t * (ROUGH.rateMax - ROUGH.rateMin);
+  scen.line_event_starts_prior_3h = Math.round(t * 4);
+  scen.line_event_starts_prior_24h = Math.round(1 + t * 11);
+  scen.hours_since_line_disruption = Math.round(48 * (1 - t));
+  return scen;
+}
+const roughWord = r => r < 20 ? "smooth" : r < 45 ? "about average" : r < 70 ? "rough" : "terrible";
+const hourWord = h => h === 0 ? "Midnight" : h === 12 ? "Noon" : h < 12 ? h + " AM" : (h - 12) + " PM";
+
+/* ---------- what the test months say about a score ----------
+   test_scores is a histogram of held-out scores (1000 bins). For any score,
+   look at hours that scored about the same and report how many of those
+   were actually followed by a disruption. Widen the window until there are
+   enough hours to say something. */
+const TS = MODEL.test_scores;
+function nearbyRate(score) {
+  const c = Math.min(TS.bins - 1, Math.max(0, Math.round(score * TS.bins)));
+  let w = 15, pos = 0, tot = 0;
+  while (w <= TS.bins) {
+    pos = 0; tot = 0;
+    for (let i = Math.max(0, c - w); i <= Math.min(TS.bins - 1, c + w); i++) {
+      pos += TS.positives[i]; tot += TS.positives[i] + TS.negatives[i];
+    }
+    if (tot >= 300) break;
+    w *= 2;
+  }
+  return { rate: tot ? pos / tot : 0, n: tot, halfWidth: w / TS.bins };
+}
+function heldOutMetrics(thr) {
+  const idx = Math.round(thr * TS.bins);
+  let tp = 0, fp = 0;
+  for (let i = idx; i < TS.bins; i++) { tp += TS.positives[i]; fp += TS.negatives[i]; }
+  return { precision: tp / (tp + fp), recall: tp / TS.n_pos, base: TS.n_pos / (TS.n_pos + TS.n_neg) };
+}
+
+/* ---------- state ---------- */
+const P = { line: "A", rough: roughFromProfile("A"), hour: 8, weekend: false };
+
+function currentScenario() {
+  const scen = baseScenario(P.line, true);
+  applyRough(scen, P.rough);
+  scen.hour_of_day = P.hour;
+  scen.is_weekend = P.weekend ? 1 : 0;
+  scen.day_of_week = P.weekend ? 6 : 3;
+  return coherent(scen);
+}
+
+/* ---------- meter: a line strip with the chosen line's bullet on it ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const METER = { x0: 24, x1: 616, y: 92, max: 0.85 };
+const xOf = s => METER.x0 + Math.min(1, s / METER.max) * (METER.x1 - METER.x0);
+let train = null;
+function buildMeter() {
+  const svg = $("meter");
+  const thr = MODEL.threshold;
+  const bands = [[0, 0.30, "Quiet"], [0.30, thr, "Watch"], [thr, METER.max, "Alarm"]];
+  bands.forEach(([a, b, name], i) => {
+    el("rect", { x: xOf(a), y: METER.y - 9, width: xOf(b) - xOf(a), height: 18,
+      fill: i === 2 ? "#000" : i === 1 ? "#8a8a86" : "#d4d4cf" }, svg);
+    const t = el("text", { x: (xOf(a) + xOf(b)) / 2, y: 140, "text-anchor": "middle", class: "band" }, svg);
+    t.textContent = name;
+  });
+  [0, 0.2, 0.4, 0.6, 0.8].forEach(v => {
+    el("line", { x1: xOf(v), x2: xOf(v), y1: METER.y + 9, y2: METER.y + 16, stroke: "#000", "stroke-width": 2 }, svg);
+    const t = el("text", { x: xOf(v), y: 118, "text-anchor": "middle", class: "tick-label" }, svg);
+    t.textContent = v.toFixed(1);
+  });
+  // The published alarm line is drawn like a station stop.
+  el("line", { x1: xOf(thr), x2: xOf(thr), y1: METER.y - 28, y2: METER.y + 20, stroke: "#000", "stroke-width": 3 }, svg);
+  const al = el("text", { x: xOf(thr), y: METER.y - 34, "text-anchor": "middle", class: "band" }, svg);
+  al.textContent = "Alarm line " + thr.toFixed(2);
+
+  train = el("g", { class: "train" }, svg);
+  el("circle", { cx: 0, cy: METER.y, r: 22, fill: "#fff" }, train);
+  el("circle", { cx: 0, cy: METER.y, r: 18, id: "train-dot" }, train);
+  const lab = el("text", { x: 0, y: METER.y + 6, "text-anchor": "middle", class: "marker-label", id: "train-txt" }, train);
+  lab.textContent = P.line;
+}
+function moveTrain(score) {
+  const [bg, fg] = MTA[P.line];
+  $("train-dot").setAttribute("fill", bg);
+  const txt = $("train-txt");
+  txt.setAttribute("fill", fg);
+  txt.setAttribute("font-size", P.line.length > 1 ? 12 : 16);
+  txt.textContent = P.line;
+  train.setAttribute("transform", `translate(${xOf(score).toFixed(1)} 0)`);
+}
+
+/* ---------- render ---------- */
+function render() {
+  const score = scoreOf(currentScenario());
+  const thr = MODEL.threshold;
+  const name = routeName(P.line);
+  const when = `${hourWord(P.hour)} on a ${P.weekend ? "weekend" : "weekday"}`;
+
+  $("rough-val").textContent = roughWord(P.rough);
+  $("hour-val").textContent = hourWord(P.hour);
+
+  $("score-line").innerHTML = `The ${name} scores <span class="num">${score.toFixed(2)}</span>.`;
+  const gap = score - thr;
+  $("verdict").textContent = gap >= 0
+    ? `That's over the alarm line. The model would flag the next hour — ${when}, after a ${roughWord(P.rough)} month.`
+    : gap > -0.15
+      ? `That's just under the alarm line. The model would stay quiet, but it's watching — ${when}, after a ${roughWord(P.rough)} month.`
+      : `That's well under the alarm line. The model would stay quiet — ${when}, after a ${roughWord(P.rough)} month.`;
+
+  const near = nearbyRate(score);
+  const per100 = Math.round(near.rate * 100);
+  $("evidence").innerHTML =
+    `<p style="margin:0">In the test months, <b>${near.n.toLocaleString()}</b> real hours scored about this high. ` +
+    `<b>${per100} out of 100</b> of them were followed by a disruption.</p>`;
+
+  moveTrain(score);
+}
+
+/* ---------- findings (computed live from the same bundle) ---------- */
+function waffle(id, filled) {
+  const host = $(id);
+  host.innerHTML = "";
+  for (let i = 0; i < 100; i++) {
+    const s = document.createElement("span");
+    if (i < filled) s.className = "on";
+    host.appendChild(s);
+  }
+}
+function renderFindings() {
+  const m = heldOutMetrics(MODEL.threshold);
+  const recall = Math.round(m.recall * 100), precision = Math.round(m.precision * 100), base = Math.round(m.base * 100);
+  $("f-recall").textContent = recall + " out of 100";
+  $("f-precision").textContent = precision;
+  $("f-base").textContent = base + " out of 100";
+  waffle("w-recall", recall);
+  waffle("w-precision", precision);
+  $("w-recall").setAttribute("aria-label", `Out of 100 real disruptions, the model caught about ${recall}`);
+  $("w-precision").setAttribute("aria-label", `Out of 100 alarms, about ${precision} were real disruptions`);
+
+  const real = scoreOf(coherent(baseScenario("A", true)));
+  const frozen = scoreOf(coherent(baseScenario("A", false)));
+  const max = 0.7;
+  const bar = (label, v) => `<div class="bar"><span class="lab">${label}</span><div class="trk" style="--w:${(v / max * 100).toFixed(1)}%"><div class="fil"></div><span class="n">${v.toFixed(2)}</span></div></div>`;
+  $("bars").innerHTML = bar("A train, its real recent history", real) + bar("A train, an average line's history", frozen);
+  $("bars").setAttribute("aria-label", `The A train scores ${real.toFixed(2)} with its real history and ${frozen.toFixed(2)} with an average history`);
+}
+
+/* ---------- controls ---------- */
+function bulletHTML(l, tag, extra) {
+  const [bg, fg] = MTA[l];
+  return `<${tag} ${extra} data-line="${l}" class="bullet${l.length > 1 ? " two" : ""}" aria-label="${routeName(l)}" title="${routeName(l)}" style="background:${bg};color:${fg}">${l}</${tag}>`;
+}
+function syncBullets() {
+  [...$("picker").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.line === P.line));
+  [...$("hero-bullets").children].forEach(a => a.setAttribute("aria-current", a.dataset.line === P.line ? "true" : "false"));
+}
+function selectLine(l) {
+  P.line = l;
+  P.rough = roughFromProfile(l);
+  $("rough").value = P.rough;
+  syncBullets();
+  render();
+}
+function init() {
+  $("picker").innerHTML = MODEL.lines.map(l => bulletHTML(l, "button", 'type="button" aria-pressed="false"')).join("");
+  $("hero-bullets").innerHTML = MODEL.lines.map(l => bulletHTML(l, "a", 'href="#try" aria-current="false"')).join("");
+  $("picker").addEventListener("click", ev => { const b = ev.target.closest("[data-line]"); if (b) selectLine(b.dataset.line); });
+  $("hero-bullets").addEventListener("click", ev => { const a = ev.target.closest("[data-line]"); if (a) selectLine(a.dataset.line); });
+  $("rough").value = P.rough;
+  $("rough").addEventListener("input", ev => { P.rough = +ev.target.value; render(); });
+  $("hour").addEventListener("input", ev => { P.hour = +ev.target.value; render(); });
+  const setDay = weekend => {
+    P.weekend = weekend;
+    $("day-week").setAttribute("aria-pressed", !weekend);
+    $("day-end").setAttribute("aria-pressed", weekend);
+    render();
+  };
+  $("day-week").addEventListener("click", () => setDay(false));
+  $("day-end").addEventListener("click", () => setDay(true));
+  $("reset").addEventListener("click", () => { P.hour = 8; $("hour").value = 8; setDay(false); selectLine(P.line); });
+
+  buildMeter();
+  syncBullets();
+  render();
+  renderFindings();
+}
+init();
+</script>
+</body>
+</html>

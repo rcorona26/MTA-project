@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - docs/index.html
       - docs/dashboard.html
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
@@ -36,7 +37,8 @@ jobs:
       - name: Prepare site
         run: |
           mkdir _site
-          cp docs/dashboard.html _site/index.html
+          cp docs/index.html _site/index.html
+          cp docs/dashboard.html _site/dashboard.html
           touch _site/.nojekyll
 
       - name: Upload GitHub Pages artifact
