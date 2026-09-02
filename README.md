@@ -141,6 +141,8 @@ Full setup, feature importances, and limitations:
 
 ## Interactive dashboard
 
+[Open the published dashboard](https://alafleur39.github.io/MTA-project/).
+
 [`docs/dashboard.html`](docs/dashboard.html) is a self-contained review page —
 no external scripts, styles, fonts, or server. Alongside the static charts it
 carries two interactive sections:
